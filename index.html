@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>O Mago da Floresta - O Resgate do Felino</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- Menu Inicial -->
+    <div id="menu-inicial" class="menu-overlay">
+      <h1>O Mago da Floresta</h1>
+      <p class="subtitulo">O Resgate do Felino - Edição Pixel Art Realista</p>
+      
+      <div class="menu-opcoes">
+        <button id="btn-iniciar" class="btn-menu">▶ Iniciar Jogo</button>
+        
+        <div class="menu-grupo">
+          <label for="range-volume">Volume do Som e Música: <span id="val-volume">50</span>%</label>
+          <input type="range" id="range-volume" min="0" max="100" value="50">
+        </div>
+
+        <div class="menu-grupo">
+          <label for="select-vidas">Vidas Iniciais (Max 5): <span id="val-vidas">3</span></label>
+          <input type="range" id="select-vidas" min="1" max="5" value="3">
+        </div>
+      </div>
+    </div>
+
+    <!-- HUD superior -->
+    <div id="hud" style="display: none;">
+      <div class="hud-box">
+        <div>MAGO HP: <span id="hud-hp">100</span>/<span id="hud-maxhp">100</span></div>
+        <div>MANA: <span id="hud-mana">100</span>/100</div>
+      </div>
+      <div class="hud-box">
+        <div>VIDAS: <span id="hud-vidas-texto">❤️❤️❤️</span></div>
+        <div>OURO: 🪙 <span id="hud-ouro">80</span></div>
+        <div>PONTOS: <span id="hud-pontos">000000</span></div>
+      </div>
+      <div class="hud-box">
+        <div>FASE: <span id="hud-fase">1-1</span></div>
+      </div>
+      <div class="hud-box magia-box">
+        MAGIA: <span id="hud-magia">Chama Arcana</span>
+      </div>
+    </div>
+
+    <!-- Tela do Jogo (Canvas) -->
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <!-- Modal da Loja Funcional -->
+    <div id="loja-modal" class="loja-modal" style="display: none;">
+      <h3>🛒 Loja Mágica da Floresta</h3>
+      <p>Pressione a tecla numérica para comprar:</p>
+      <ul>
+        <li>[1] Poção de Cura (+50 HP) — 🪙 20</li>
+        <li>[2] Lança de Gelo (Magia Azul) — 🪙 50</li>
+        <li>[3] Chuva de Veneno (Magia Roxa) — 🪙 60</li>
+      </ul>
+      <p id="loja-msg" style="color: #fde047; font-size: 11px; margin-top: 8px;"></p>
+      <button id="fechar-loja" class="btn-menu" style="margin-top: 10px;">Sair da Loja (X)</button>
+    </div>
+
+    <!-- Inventário Lateral -->
+    <div id="inventario-container" style="display: none;">
+      <div class="inventario-header">
+        <span>Grimório</span>
+      </div>
+      <div id="inventario-grid" class="inventario-grid"></div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
