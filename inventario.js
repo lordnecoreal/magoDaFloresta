@@ -8,16 +8,20 @@ export class SistemaInventario {
     this.adicionarItem('livro_fogo');
   }
 
+  possuiItem(tipoItem) {
+    return this.itens.some(i => i.tipo === tipoItem);
+  }
+
   adicionarItem(tipoItem) {
     const mapa = {
-      livro_fogo: { nome: 'Chama Arcana', cor: '#ef4444', magia: 'Chama Arcana (Z)', corProj: '#ef4444' },
-      livro_gelo: { nome: 'Lança Gelo', cor: '#3b82f6', magia: 'Lança Gelo (Z)', corProj: '#38bdf8' },
-      livro_veneno: { nome: 'Chuva Veneno', cor: '#a855f7', magia: 'Chuva Veneno (Z)', corProj: '#c084fc' },
-      livro_cura: { nome: 'Aura Curativa', cor: '#22c55e', magia: 'Aura Curativa (Z)', corProj: '#4ade80' }
+      livro_fogo: { nome: 'Chama Arcana', cor: '#ef4444', magia: 'Chama Arcana (Z)', corProj: '#ef4444', tipoProj: 'fogo' },
+      livro_gelo: { nome: 'Lança Gelo', cor: '#3b82f6', magia: 'Lança Gelo (Z)', corProj: '#38bdf8', tipoProj: 'gelo' },
+      livro_veneno: { nome: 'Chuva Veneno', cor: '#a855f7', magia: 'Chuva Veneno (Z)', corProj: '#c084fc', tipoProj: 'veneno' },
+      livro_cura: { nome: 'Aura Curativa', cor: '#22c55e', magia: 'Aura Curativa (Z)', corProj: '#4ade80', tipoProj: 'cura' }
     };
 
     const info = mapa[tipoItem];
-    if (!info) return;
+    if (!info) return false;
 
     const existente = this.itens.find(i => i.tipo === tipoItem);
     if (existente) {
@@ -27,6 +31,7 @@ export class SistemaInventario {
     }
 
     this.renderizar();
+    return true;
   }
 
   equipar(tipoItem) {

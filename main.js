@@ -5,6 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const menu = document.getElementById('menu-inicial');
   const hud = document.getElementById('hud');
   const inventario = document.getElementById('inventario-container');
+  const controlesMobile = document.getElementById('controles-mobile');
   
   const btnIniciar = document.getElementById('btn-iniciar');
   const rangeVolume = document.getElementById('range-volume');
@@ -24,6 +25,10 @@ window.addEventListener('DOMContentLoaded', () => {
     menu.style.display = 'none';
     hud.style.display = 'flex';
     inventario.style.display = 'block';
+
+    if ('ontouchstart' in window || window.innerWidth <= 800) {
+      controlesMobile.style.display = 'flex';
+    }
 
     const jogo = new MotorJogo(canvas, config);
     jogo.iniciar();

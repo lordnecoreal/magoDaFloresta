@@ -3,6 +3,7 @@
   margin: 0;
   padding: 0;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -13,11 +14,13 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 #game-container {
   position: relative;
-  width: 800px;
+  width: 100%;
+  max-width: 800px;
   height: 500px;
   background: #0f172a;
   border: 4px solid #1e293b;
@@ -38,27 +41,28 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 10;
-  gap: 15px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .menu-overlay h1 {
-  font-size: 30px;
+  font-size: 26px;
   color: #fde047;
   text-shadow: 3px 3px #78350f;
-  letter-spacing: 2px;
+  text-align: center;
 }
 
 .subtitulo {
-  font-size: 13px;
+  font-size: 12px;
   color: #38bdf8;
-  margin-bottom: 15px;
+  margin-bottom: 5px;
 }
 
 .menu-opcoes {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  width: 280px;
+  gap: 10px;
+  width: 300px;
   align-items: center;
 }
 
@@ -66,8 +70,8 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  font-size: 12px;
-  gap: 4px;
+  font-size: 11px;
+  gap: 3px;
   color: #cbd5e1;
 }
 
@@ -76,24 +80,30 @@ body {
   cursor: pointer;
 }
 
+.instrucoes-box {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 11px;
+  width: 100%;
+  text-align: center;
+  color: #e2e8f0;
+  line-height: 1.4;
+}
+
 .btn-menu {
   background: #7c3aed;
   color: #fff;
   border: 2px solid #a78bfa;
-  padding: 10px 20px;
-  font-size: 15px;
+  padding: 8px 16px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: bold;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
   width: 100%;
   box-shadow: 0 4px #581c87;
-}
-
-.btn-menu:hover {
-  background: #8b5cf6;
-  transform: translateY(-1px);
 }
 
 #hud {
@@ -123,15 +133,61 @@ body {
 
 canvas {
   display: block;
+  width: 100%;
+  height: calc(100% - 40px);
   background-color: #0b1329;
   image-rendering: pixelated;
 }
 
+#controles-mobile {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 90px;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: rgba(15, 23, 42, 0.6);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.controles-esq, .controles-dir {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.btn-touch {
+  width: 50px;
+  height: 50px;
+  background: rgba(124, 58, 237, 0.8);
+  border: 2px solid #a78bfa;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+.btn-acao {
+  width: 60px;
+  font-size: 11px;
+  border-radius: 8px;
+}
+
 .loja-modal {
   position: absolute;
-  top: 80px;
-  left: 200px;
-  width: 400px;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
   background: rgba(15, 23, 42, 0.98);
   border: 3px solid #fde047;
   border-radius: 8px;
@@ -163,11 +219,12 @@ canvas {
   position: absolute;
   top: 55px;
   right: 10px;
-  width: 180px;
+  width: 160px;
   background: rgba(15, 23, 42, 0.9);
   border: 2px solid #475569;
   border-radius: 6px;
-  padding: 8px;
+  padding: 6px;
+  z-index: 3;
 }
 
 .inventario-header {
@@ -188,8 +245,8 @@ canvas {
 
 .slot {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: #090d16;
   border: 1px solid #475569;
   border-radius: 4px;
@@ -205,15 +262,15 @@ canvas {
 }
 
 .item-icone {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 2px;
 }
 
 .qtd {
   position: absolute;
   bottom: 1px;
-  right: 3px;
+  right: 2px;
   font-size: 8px;
   color: #fef08a;
   font-weight: bold;

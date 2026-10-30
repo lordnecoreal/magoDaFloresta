@@ -50,10 +50,13 @@ export class MotorJogo {
 
     window.addEventListener('keyup', e => this.teclas[e.code] = false);
 
-    document.getElementById('fechar-loja').onclick = () => {
-      this.lojaAberta = false;
-      document.getElementById('loja-modal').style.display = 'none';
-    };
+    const btnFecharLoja = document.getElementById('fechar-loja');
+    if (btnFecharLoja) {
+      btnFecharLoja.onclick = () => {
+        this.lojaAberta = false;
+        document.getElementById('loja-modal').style.display = 'none';
+      };
+    }
 
     this.audio.iniciarMusicaFundo();
     this.carregarFase(`${this.mundoAtualIndex}-${this.subFaseIndex}`);
@@ -107,9 +110,10 @@ export class MotorJogo {
 
   verificarLoja() {
     const loja = this.obstaculos.find(o => o.tipo === 'loja');
-    if (loja && Math.abs(this.jogador.x - loja.x) < 80) {
+    if (loja && Math.abs(this.jogador.x - loja.x) < 100) {
       this.lojaAberta = !this.lojaAberta;
       document.getElementById('loja-modal').style.display = this.lojaAberta ? 'block' : 'none';
+      document.getElementById('loja-ouro').innerText = this.ouro;
       document.getElementById('loja-msg').innerText = '';
     }
   }
@@ -126,6 +130,10 @@ export class MotorJogo {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     } else if (tipo === 'gelo') {
+      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_gelo')) {
+        msgEl.innerText = '⚠ Você já possui a Lança de Gelo no grimório!';
+        return;
+      }
       if (this.ouro >= 50) {
         this.ouro -= 50;
         this.inventario.adicionarItem('livro_gelo');
@@ -135,6 +143,10 @@ export class MotorJogo {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     } else if (tipo === 'veneno') {
+      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_veneno')) {
+        msgEl.innerText = '⚠ Você já possui a Chuva de Veneno no grimório!';
+        return;
+      }
       if (this.ouro >= 60) {
         this.ouro -= 60;
         this.inventario.adicionarItem('livro_veneno');
@@ -144,6 +156,9 @@ export class MotorJogo {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     }
+    // Atualização imediata do ouro na modal da loja e no HUD
+    document.getElementById('loja-ouro').innerText = this.ouro;
+    document.getElementById('hud-ouro').innerText = this.ouro;
   }
 
   proximaFase() {
@@ -214,7 +229,6 @@ export class MotorJogo {
     this.jogador.projeteis.forEach(p => p.x += p.vx * dt);
     this.jogador.projeteis = this.jogador.projeteis.filter(p => p.x > this.cameraX && p.x < this.cameraX + 800);
 
-    // Movimentação dos Inimigos (patrulha)
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
 
@@ -223,7 +237,6 @@ export class MotorJogo {
         ini.direcao *= -1;
       }
 
-      // Magia acerta inimigo
       this.jogador.projeteis.forEach((p, index) => {
         if (
           p.x < ini.x + ini.largura &&
@@ -241,7 +254,6 @@ export class MotorJogo {
         }
       });
 
-      // Contato com Inimigo (Stomp ou Dano)
       if (
         this.jogador.x < ini.x + ini.largura &&
         this.jogador.x + this.jogador.largura > ini.x &&
@@ -272,12 +284,14 @@ export class MotorJogo {
       }
     });
 
+    // Coleta de moedas garantida (Margem de colisão expandida)
     this.moedas.forEach(m => {
+      const margem = 24; // Permite pegar a moeda facilmente encostando nela
       if (!m.coletada &&
-        this.jogador.x < m.x + m.largura &&
-        this.jogador.x + this.jogador.largura > m.x &&
-        this.jogador.y < m.y + m.altura &&
-        this.jogador.y + this.jogador.altura > m.y
+        this.jogador.x < m.x + (m.largura || 18) + margem &&
+        this.jogador.x + this.jogador.largura > m.x - margem &&
+        this.jogador.y < m.y + (m.altura || 18) + margem &&
+        this.jogador.y + this.jogador.altura > m.y - margem
       ) {
         m.coletada = true;
         this.ouro += 5;
@@ -334,17 +348,29 @@ export class MotorJogo {
         this.ctx.fillStyle = '#22c55e';
         this.ctx.fillRect(obs.x - 4, obs.y, obs.largura + 8, 14);
       } else if (obs.tipo === 'loja') {
+        const altLoja = obs.altura || 100;
+        const largLoja = obs.largura || 110;
+        
+        // Estrutura/Parede de madeira da casa
         this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(obs.x, obs.y + 15, obs.largura, obs.altura - 15);
+        this.ctx.fillRect(obs.x, obs.y + 30, largLoja, altLoja - 30);
+        
+        // Porta da casa
+        this.ctx.fillStyle = '#451a03';
+        this.ctx.fillRect(obs.x + largLoja / 2 - 12, obs.y + 50, 24, altLoja - 50);
+
+        // Telhado Vermelho
         this.ctx.fillStyle = '#991b1b';
         this.ctx.beginPath();
-        this.ctx.moveTo(obs.x - 10, obs.y + 15);
-        this.ctx.lineTo(obs.x + obs.largura / 2, obs.y - 15);
-        this.ctx.lineTo(obs.x + obs.largura + 10, obs.y + 15);
+        this.ctx.moveTo(obs.x - 10, obs.y + 30);
+        this.ctx.lineTo(obs.x + largLoja / 2, obs.y - 10);
+        this.ctx.lineTo(obs.x + largLoja + 10, obs.y + 30);
         this.ctx.fill();
+
+        // Texto do Mercador/Loja
         this.ctx.fillStyle = '#fde047';
         this.ctx.font = 'bold 11px monospace';
-        this.ctx.fillText('🛒 LOJA (X)', obs.x - 2, obs.y - 25);
+        this.ctx.fillText('🛒 LOJA (X)', obs.x, obs.y - 18);
       }
     });
 
@@ -361,7 +387,6 @@ export class MotorJogo {
       }
     });
 
-    // Inimigos em movimento
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
       if (ini.tipo === 'cogumelo') {
@@ -371,7 +396,6 @@ export class MotorJogo {
         this.ctx.beginPath();
         this.ctx.arc(ini.x + 23, ini.y + 20, 23, Math.PI, 0, false);
         this.ctx.fill();
-        // Olhos malvados do cogumelo
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(ini.x + 15, ini.y + 22, 4, 6);
         this.ctx.fillRect(ini.x + 27, ini.y + 22, 4, 6);
@@ -383,31 +407,25 @@ export class MotorJogo {
       }
     });
 
-    // Jogador Realista com Olhos e Pés Animados
     if (this.jogador) {
       const balocoPernas = Math.sin(this.animacaoFrame) * 4;
 
-      // Manto Roxo
       this.ctx.fillStyle = '#7c3aed';
       this.ctx.fillRect(this.jogador.x + 4, this.jogador.y + 18, 28, 28);
       
-      // Pés animados
       this.ctx.fillStyle = '#3b0764';
       this.ctx.fillRect(this.jogador.x + 6, this.jogador.y + 46, 10, 6 + (this.jogador.vx !== 0 ? balocoPernas : 0));
       this.ctx.fillRect(this.jogador.x + 20, this.jogador.y + 46, 10, 6 - (this.jogador.vx !== 0 ? balocoPernas : 0));
 
-      // Rosto / Barba
       this.ctx.fillStyle = '#fef08a';
       this.ctx.fillRect(this.jogador.x + 8, this.jogador.y + 10, 20, 14);
       this.ctx.fillStyle = '#ffffff';
       this.ctx.fillRect(this.jogador.x + 10, this.jogador.y + 18, 16, 8);
 
-      // Olhos Expressivos
       this.ctx.fillStyle = '#0f172a';
       const olhoX = this.jogador.direcao > 0 ? this.jogador.x + 20 : this.jogador.x + 10;
       this.ctx.fillRect(olhoX, this.jogador.y + 13, 3, 4);
 
-      // Chapéu Pontudo Clássico
       this.ctx.fillStyle = '#6d28d9';
       this.ctx.beginPath();
       this.ctx.moveTo(this.jogador.x + 2, this.jogador.y + 10);
@@ -415,7 +433,6 @@ export class MotorJogo {
       this.ctx.lineTo(this.jogador.x + (this.jogador.direcao > 0 ? 38 : -4), this.jogador.y - 12);
       this.ctx.fill();
 
-      // Cajado com Cristal
       this.ctx.strokeStyle = '#78350f';
       this.ctx.lineWidth = 4;
       this.ctx.beginPath();
@@ -428,7 +445,6 @@ export class MotorJogo {
       this.ctx.arc(cajadoX, this.jogador.y + 2, 6, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Projéteis coloridos por elemento
       this.jogador.projeteis.forEach(p => {
         this.ctx.fillStyle = p.cor;
         this.ctx.beginPath();
