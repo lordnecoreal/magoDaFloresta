@@ -10,6 +10,7 @@ export class MotorJogo {
     
     this.audio = new SistemaAudio(configInicial.volume);
     this.vidasIniciais = configInicial.vidas;
+    this.maxVidasPermitidas = 10; // Limite máximo de 10 corações para vendas
 
     this.fases = gerarFases();
     this.mundoAtualIndex = 1;
@@ -22,13 +23,11 @@ export class MotorJogo {
     this.animacaoFrame = 0;
     this.tempoInvulneravel = 0;
 
-    this.inventario = new SistemaInventario(8, (item) => {
+    this.inventario = new SistemaInventario(4, (item) => {
       if (this.jogador) {
         this.jogador.tipoMagia = item.magia;
         this.jogador.corProj = item.corProj || '#ef4444';
       }
-      const elMagia = document.getElementById('hud-magia');
-      if (elMagia) elMagia.innerText = item.nome;
     });
 
     this.teclas = {};
@@ -67,7 +66,7 @@ export class MotorJogo {
     configurarBotaoTouch('btn-dir', () => this.teclas['KeyD'] = true, () => this.teclas['KeyD'] = false);
     configurarBotaoTouch('btn-pulo', () => this.teclas['Space'] = true, () => this.teclas['Space'] = false);
     
-    // Botão de Ataque / Magia ou Interagir com a Tenda
+    // Botão de Ataque / Magia ou Interagir com a Tenda do Mercador
     const btnMagia = document.getElementById('btn-magia');
     if (btnMagia) {
       btnMagia.innerHTML = '✨';
@@ -85,7 +84,7 @@ export class MotorJogo {
       btnMagia.addEventListener('click', acaoMagiaOuLoja);
     }
 
-    // Configuração dos botões de compra por toque no modal do mercador
+    // Compras no Mercador ao toque
     const ligarBotaoLoja = (id, tipo) => {
       const el = document.getElementById(id);
       if (el) {
@@ -124,6 +123,9 @@ export class MotorJogo {
     this.larguraMapa = this.faseConfig.larguraMapa;
     this.cameraX = 0;
 
+    const vidasAtuais = this.jogador ? this.jogador.vidas : this.vidasIniciais;
+    const maxVidasAtuais = this.jogador ? this.jogador.maxVidas : this.vidasIniciais;
+
     this.jogador = {
       x: 60,
       y: 280,
@@ -135,7 +137,8 @@ export class MotorJogo {
       maxHp: 100,
       mana: 100,
       maxMana: 100,
-      vidas: this.vidasIniciais,
+      vidas: vidasAtuais,
+      maxVidas: maxVidasAtuais,
       noChao: false,
       direcao: 1,
       tipoMagia: 'Chama Arcana (Z)',
@@ -147,7 +150,6 @@ export class MotorJogo {
     this.inimigos = JSON.parse(JSON.stringify(this.faseConfig.inimigos));
     this.moedas = JSON.parse(JSON.stringify(this.faseConfig.moedas));
 
-    // Inicializa HP máximo visível para a barra de energia dos inimigos
     this.inimigos.forEach(ini => {
       if (!ini.maxHp) ini.maxHp = ini.hp;
     });
@@ -184,18 +186,25 @@ export class MotorJogo {
     if (tipo === 'pocao') {
       if (this.ouro >= 20) {
         this.ouro -= 20;
-        this.jogador.vidas = 3; // Restaura todos os corações
+        this.jogador.hp = this.jogador.maxHp; // Cura 100% do HP
+        this.jogador.vidas = this.jogador.maxVidas || 3; // Restaura todos os corações
         this.audio.compra();
-        msgEl.innerText = '✔ Poção comprada! Todos corações restaurados.';
+        msgEl.innerText = '✔ Poção usada! HP e Corações 100% restaurados.';
       } else {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     } else if (tipo === 'coracao') {
+      const maxVidasAtual = this.jogador.maxVidas || 3;
+      if (maxVidasAtual >= this.maxVidasPermitidas) {
+        msgEl.innerText = '⚠ Você já possui o limite máximo de 10 Corações!';
+        return;
+      }
       if (this.ouro >= 40) {
         this.ouro -= 40;
-        this.jogador.vidas += 1; // Aumenta +1 coração
+        this.jogador.maxVidas = maxVidasAtual + 1;
+        this.jogador.vidas += 1;
         this.audio.compra();
-        msgEl.innerText = '✔ Coração Extra adquirido (+1 Vida)!';
+        msgEl.innerText = `✔ Coração Extra adquirido! Total: ${this.jogador.maxVidas}/10`;
       } else {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
@@ -398,13 +407,13 @@ export class MotorJogo {
 
     this.cameraX = Math.max(0, Math.min(this.jogador.x - 200, this.larguraMapa - 800));
 
-    document.getElementById('hud-hp').innerText = Math.round(this.jogador.hp);
-    document.getElementById('hud-maxhp').innerText = this.jogador.maxHp;
-    document.getElementById('hud-mana').innerText = Math.round(this.jogador.mana);
+    const elVidas = document.getElementById('hud-vidas-texto');
+    if (elVidas) {
+      elVidas.innerText = '❤️'.repeat(Math.max(0, this.jogador.vidas));
+    }
     document.getElementById('hud-fase').innerText = `${this.mundoAtualIndex}-${this.subFaseIndex}`;
     document.getElementById('hud-pontos').innerText = String(this.pontos).padStart(6, '0');
     document.getElementById('hud-ouro').innerText = this.ouro;
-    document.getElementById('hud-vidas-texto').innerText = '❤️'.repeat(Math.max(0, this.jogador.vidas));
   }
 
   renderizar() {
@@ -443,7 +452,7 @@ export class MotorJogo {
         const tw = 70;
         const th = 60;
         const tx = obs.x;
-        const ty = 380 - th;
+        const ty = 380 - th; // Alinhamento exato no chão
 
         this.ctx.fillStyle = '#78350f';
         this.ctx.fillRect(tx + 5, ty + 15, 6, th - 15);
@@ -542,7 +551,7 @@ export class MotorJogo {
         this.ctx.fillRect(ini.x + 27, ini.y + 22, 4, 6);
       }
 
-      // Barra de Energia Vital (HP) do Inimigo se ele tomou dano
+      // Barra de Energia Vital dos Inimigos ao tomar dano
       if (ini.hp < ini.maxHp) {
         const larguraBarra = ini.largura || 40;
         const barraX = ini.x;
