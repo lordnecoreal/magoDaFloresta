@@ -3,9 +3,10 @@ import { SistemaInventario } from './inventario.js';
 import { SistemaAudio } from './audio.js';
 
 export class MotorJogo {
-  constructor(canvas, configInicial = { volume: 0.5, vidas: 3 }) {
+  constructor(canvas, configInicial = { volume: 0.5, vidas: 3 }, onVoltarMenu = null) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    this.onVoltarMenu = onVoltarMenu;
     
     this.audio = new SistemaAudio(configInicial.volume);
     this.vidasIniciais = configInicial.vidas;
@@ -19,6 +20,7 @@ export class MotorJogo {
     this.tempoAnterior = 0;
     this.lojaAberta = false;
     this.animacaoFrame = 0;
+    this.tempoInvulneravel = 0;
 
     this.inventario = new SistemaInventario(8, (item) => {
       if (this.jogador) {
@@ -49,6 +51,32 @@ export class MotorJogo {
     });
 
     window.addEventListener('keyup', e => this.teclas[e.code] = false);
+
+    // Controles Mobile / Touch com instruções integradas
+    const configurarBotaoTouch = (id, acaoInicio, acaoFim) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); acaoInicio(); }, { passive: false });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); if (acaoFim) acaoFim(); }, { passive: false });
+      btn.addEventListener('mousedown', () => acaoInicio());
+      btn.addEventListener('mouseup', () => { if (acaoFim) acaoFim(); });
+    };
+
+    configurarBotaoTouch('btn-esq', () => this.teclas['KeyA'] = true, () => this.teclas['KeyA'] = false);
+    configurarBotaoTouch('btn-dir', () => this.teclas['KeyD'] = true, () => this.teclas['KeyD'] = false);
+    configurarBotaoTouch('btn-pulo', () => this.teclas['Space'] = true, () => this.teclas['Space'] = false);
+    
+    const btnMagia = document.getElementById('btn-magia');
+    if (btnMagia) {
+      btnMagia.innerHTML = '✨';
+      btnMagia.addEventListener('touchstart', (e) => { e.preventDefault(); if (this.jogador) this.dispararMagia(); }, { passive: false });
+      btnMagia.addEventListener('click', () => { if (this.jogador) this.dispararMagia(); });
+    }
+
+    const controlesMobile = document.getElementById('controles-mobile');
+    if ('ontouchstart' in window || window.innerWidth <= 800) {
+      if (controlesMobile) controlesMobile.style.display = 'flex';
+    }
 
     const btnFecharLoja = document.getElementById('fechar-loja');
     if (btnFecharLoja) {
@@ -109,8 +137,9 @@ export class MotorJogo {
   }
 
   verificarLoja() {
+    if (this.faseConfig.chefao) return;
     const loja = this.obstaculos.find(o => o.tipo === 'loja');
-    if (loja && Math.abs(this.jogador.x - loja.x) < 100) {
+    if (loja && Math.abs(this.jogador.x - loja.x) < 90) {
       this.lojaAberta = !this.lojaAberta;
       document.getElementById('loja-modal').style.display = this.lojaAberta ? 'block' : 'none';
       document.getElementById('loja-ouro').innerText = this.ouro;
@@ -156,7 +185,6 @@ export class MotorJogo {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     }
-    // Atualização imediata do ouro na modal da loja e no HUD
     document.getElementById('loja-ouro').innerText = this.ouro;
     document.getElementById('hud-ouro').innerText = this.ouro;
   }
@@ -182,6 +210,9 @@ export class MotorJogo {
     if (!this.jogador || this.lojaAberta) return;
 
     this.animacaoFrame += dt * 10;
+    if (this.tempoInvulneravel > 0) {
+      this.tempoInvulneravel -= dt;
+    }
 
     if (this.jogador.mana < this.jogador.maxMana) {
       this.jogador.mana = Math.min(this.jogador.maxMana, this.jogador.mana + 15 * dt);
@@ -246,10 +277,21 @@ export class MotorJogo {
         ) {
           ini.hp -= 1;
           this.jogador.projeteis.splice(index, 1);
-          this.audio.acertoInimigo();
-          if (ini.hp <= 0) {
-            ini.estado = 'morto';
-            this.pontos += 200;
+
+          if (ini.ehBoss) {
+            if (ini.hp <= 0) {
+              ini.estado = 'morto';
+              this.audio.chefeDerrota();
+              this.pontos += 500;
+            } else {
+              this.audio.chefeDano();
+            }
+          } else {
+            this.audio.acertoInimigo();
+            if (ini.hp <= 0) {
+              ini.estado = 'morto';
+              this.pontos += 200;
+            }
           }
         }
       });
@@ -265,28 +307,35 @@ export class MotorJogo {
           this.jogador.vy = -350;
           this.audio.stomp();
           this.pontos += 150;
-          if (ini.hp <= 0) ini.estado = 'morto';
-        } else {
-          this.jogador.hp -= 20 * dt;
-          if (this.jogador.hp <= 0) {
-            this.jogador.vidas--;
-            if (this.jogador.vidas <= 0) {
-              this.audio.pararMusicaFundo();
-              alert("💀 Game Over! O felino continuará aprisionado...");
-              location.reload();
+          if (ini.hp <= 0) {
+            ini.estado = 'morto';
+            if (ini.ehBoss) this.audio.chefeDerrota();
+          }
+        } else if (this.tempoInvulneravel <= 0) {
+          this.jogador.vidas--;
+          this.audio.danoMago();
+          this.tempoInvulneravel = 1.0;
+
+          const direcaoRepulsa = this.jogador.x < ini.x ? -1 : 1;
+          this.jogador.x += direcaoRepulsa * 45; 
+          this.jogador.vy = -200; 
+
+          if (this.jogador.vidas <= 0) {
+            this.audio.pararMusicaFundo();
+            this.audio.somDerrotaJogo();
+            alert("💀 Fim de Jogo! Você perdeu todos os corações.");
+            if (this.onVoltarMenu) {
+              this.onVoltarMenu();
             } else {
-              this.jogador.hp = this.jogador.maxHp;
-              this.jogador.x = 60;
-              this.jogador.y = 280;
+              location.reload();
             }
           }
         }
       }
     });
 
-    // Coleta de moedas garantida (Margem de colisão expandida)
     this.moedas.forEach(m => {
-      const margem = 24; // Permite pegar a moeda facilmente encostando nela
+      const margem = 24;
       if (!m.coletada &&
         this.jogador.x < m.x + (m.largura || 18) + margem &&
         this.jogador.x + this.jogador.largura > m.x - margem &&
@@ -300,7 +349,8 @@ export class MotorJogo {
       }
     });
 
-    if (this.jogador.x >= this.faseConfig.portalX) {
+    const chefaoVivo = this.faseConfig.chefao && this.inimigos.some(i => i.ehBoss && i.estado !== 'morto');
+    if (!chefaoVivo && this.jogador.x >= this.faseConfig.portalX) {
       this.proximaFase();
     }
 
@@ -348,29 +398,48 @@ export class MotorJogo {
         this.ctx.fillStyle = '#22c55e';
         this.ctx.fillRect(obs.x - 4, obs.y, obs.largura + 8, 14);
       } else if (obs.tipo === 'loja') {
-        const altLoja = obs.altura || 100;
-        const largLoja = obs.largura || 110;
-        
-        // Estrutura/Parede de madeira da casa
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(obs.x, obs.y + 30, largLoja, altLoja - 30);
-        
-        // Porta da casa
-        this.ctx.fillStyle = '#451a03';
-        this.ctx.fillRect(obs.x + largLoja / 2 - 12, obs.y + 50, 24, altLoja - 50);
+        // Tenda do Mercador alinhada perfeitamente na superfície exata da grama (ty = 380 - th)[cite: 14]
+        const tw = 70;
+        const th = 60;
+        const tx = obs.x;
+        const ty = 380 - th;
 
-        // Telhado Vermelho
-        this.ctx.fillStyle = '#991b1b';
+        // Estacas de madeira laterais
+        this.ctx.fillStyle = '#78350f';
+        this.ctx.fillRect(tx + 5, ty + 15, 6, th - 15);
+        this.ctx.fillRect(tx + tw - 11, ty + 15, 6, th - 15);
+
+        // Lona da tenda (Estilo RPG clássico)
+        this.ctx.fillStyle = '#d4b483';
         this.ctx.beginPath();
-        this.ctx.moveTo(obs.x - 10, obs.y + 30);
-        this.ctx.lineTo(obs.x + largLoja / 2, obs.y - 10);
-        this.ctx.lineTo(obs.x + largLoja + 10, obs.y + 30);
+        this.ctx.moveTo(tx, ty + th);
+        this.ctx.lineTo(tx + tw / 2, ty);
+        this.ctx.lineTo(tx + tw, ty + th);
+        this.ctx.closePath();
         this.ctx.fill();
 
-        // Texto do Mercador/Loja
+        // Dobra central da lona
+        this.ctx.fillStyle = '#c2a172';
+        this.ctx.beginPath();
+        this.ctx.moveTo(tx + tw / 2, ty);
+        this.ctx.lineTo(tx + tw / 2 - 6, ty + th);
+        this.ctx.lineTo(tx + tw / 2 + 6, ty + th);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Entrada escura da tenda
+        this.ctx.fillStyle = '#291605';
+        this.ctx.beginPath();
+        this.ctx.moveTo(tx + tw / 2 - 12, ty + th);
+        this.ctx.lineTo(tx + tw / 2 - 8, ty + th / 2);
+        this.ctx.lineTo(tx + tw / 2 + 8, ty + th / 2);
+        this.ctx.lineTo(tx + tw / 2 + 12, ty + th);
+        this.ctx.fill();
+
+        // Texto indicativo
         this.ctx.fillStyle = '#fde047';
         this.ctx.font = 'bold 11px monospace';
-        this.ctx.fillText('🛒 LOJA (X)', obs.x, obs.y - 18);
+        this.ctx.fillText('⛺ Aperte [X] para o Mercador', tx - 35, ty - 12);
       }
     });
 
@@ -389,7 +458,41 @@ export class MotorJogo {
 
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
-      if (ini.tipo === 'cogumelo') {
+      if (ini.ehBoss) {
+        const bx = ini.x;
+        const by = ini.y;
+        
+        this.ctx.fillStyle = '#65a30d';
+        this.ctx.fillRect(bx + 20, by + 40, 80, 70);
+
+        this.ctx.fillStyle = '#4d7c0f';
+        this.ctx.fillRect(bx + 30, by + 10, 60, 45);
+
+        this.ctx.fillStyle = '#0284c7';
+        this.ctx.beginPath();
+        this.ctx.moveTo(bx + 60, by + 10);
+        this.ctx.lineTo(bx + 30, by - 15);
+        this.ctx.lineTo(bx + 70, by - 5);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(bx + 40, by + 20, 12, 8);
+        this.ctx.fillRect(bx + 68, by + 20, 12, 8);
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(bx + 46, by + 22, 4, 4);
+        this.ctx.fillRect(bx + 74, by + 22, 4, 4);
+
+        this.ctx.fillStyle = '#991b1b';
+        this.ctx.fillRect(bx + 42, by + 34, 36, 12);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(bx + 45, by + 34, 6, 4);
+        this.ctx.fillRect(bx + 65, by + 34, 6, 4);
+
+        this.ctx.fillStyle = '#78350f';
+        this.ctx.fillRect(bx - 10, by + 75, 100, 10);
+        this.ctx.fillStyle = '#64748b';
+        this.ctx.fillRect(bx - 30, by + 60, 35, 35);
+      } else {
         this.ctx.fillStyle = '#f5f5f4';
         this.ctx.fillRect(ini.x + 10, ini.y + 20, 26, 26);
         this.ctx.fillStyle = '#dc2626';
@@ -399,15 +502,14 @@ export class MotorJogo {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(ini.x + 15, ini.y + 22, 4, 6);
         this.ctx.fillRect(ini.x + 27, ini.y + 22, 4, 6);
-      } else {
-        this.ctx.fillStyle = '#15803d';
-        this.ctx.fillRect(ini.x, ini.y, ini.largura, ini.altura);
-        this.ctx.fillStyle = '#fde047';
-        this.ctx.fillRect(ini.x + 20, ini.y + 30, 15, 10);
       }
     });
 
     if (this.jogador) {
+      if (this.tempoInvulneravel > 0 && Math.floor(this.tempoInvulneravel * 10) % 2 === 0) {
+        this.ctx.globalAlpha = 0.4;
+      }
+
       const balocoPernas = Math.sin(this.animacaoFrame) * 4;
 
       this.ctx.fillStyle = '#7c3aed';
@@ -451,9 +553,12 @@ export class MotorJogo {
         this.ctx.arc(p.x + 9, p.y + 6, 8, 0, Math.PI * 2);
         this.ctx.fill();
       });
+
+      this.ctx.globalAlpha = 1.0;
     }
 
-    if (this.faseConfig) {
+    const chefaoVivo = this.faseConfig.chefao && this.inimigos.some(i => i.ehBoss && i.estado !== 'morto');
+    if (!chefaoVivo && this.faseConfig) {
       this.ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
       this.ctx.fillRect(this.faseConfig.portalX, 260, 50, 120);
       this.ctx.fillStyle = '#38bdf8';

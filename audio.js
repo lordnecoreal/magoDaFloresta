@@ -81,4 +81,24 @@ export class SistemaAudio {
     setTimeout(() => this.tocarTom(659.25, 'triangle', 0.1, 0.3), 80);
     setTimeout(() => this.tocarTom(783.99, 'triangle', 0.2, 0.3), 160);
   }
+
+  danoMago() {
+    this.tocarTom(120, 'sawtooth', 0.25, 0.4);
+  }
+
+  somDerrotaJogo() {
+    this.tocarTom(200, 'sawtooth', 0.2, 0.3);
+    setTimeout(() => this.tocarTom(150, 'sawtooth', 0.3, 0.3), 200);
+    setTimeout(() => this.tocarTom(90, 'square', 0.6, 0.4), 400);
+  }
+
+  chefeDano() {
+    this.tocarTom(180, 'square', 0.2, 0.35);
+  }
+
+  chefeDerrota() {
+    this.tocarTom(250, 'sawtooth', 0.15, 0.4);
+    setTimeout(() => this.tocarTom(130, 'sawtooth', 0.3, 0.4), 100);
+    setTimeout(() => this.tocarTom(70, 'square', 0.6, 0.5), 250);
+  }
 }
