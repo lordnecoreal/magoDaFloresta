@@ -45,14 +45,15 @@ export class MotorJogo {
 
       if (this.lojaAberta) {
         if (e.code === 'Digit1') this.comprarItem('pocao');
-        if (e.code === 'Digit2') this.comprarItem('gelo');
-        if (e.code === 'Digit3') this.comprarItem('veneno');
+        if (e.code === 'Digit2') this.comprarItem('coracao');
+        if (e.code === 'Digit3') this.comprarItem('gelo');
+        if (e.code === 'Digit4') this.comprarItem('veneno');
       }
     });
 
     window.addEventListener('keyup', e => this.teclas[e.code] = false);
 
-    // Controles Mobile / Touch com instruções integradas
+    // Controles Mobile / Touch
     const configurarBotaoTouch = (id, acaoInicio, acaoFim) => {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -66,12 +67,36 @@ export class MotorJogo {
     configurarBotaoTouch('btn-dir', () => this.teclas['KeyD'] = true, () => this.teclas['KeyD'] = false);
     configurarBotaoTouch('btn-pulo', () => this.teclas['Space'] = true, () => this.teclas['Space'] = false);
     
+    // Botão de Ataque / Magia ou Interagir com a Tenda
     const btnMagia = document.getElementById('btn-magia');
     if (btnMagia) {
       btnMagia.innerHTML = '✨';
-      btnMagia.addEventListener('touchstart', (e) => { e.preventDefault(); if (this.jogador) this.dispararMagia(); }, { passive: false });
-      btnMagia.addEventListener('click', () => { if (this.jogador) this.dispararMagia(); });
+      const acaoMagiaOuLoja = (e) => {
+        e.preventDefault();
+        if (!this.jogador) return;
+        const loja = this.obstaculos.find(o => o.tipo === 'loja');
+        if (loja && Math.abs(this.jogador.x - loja.x) < 90) {
+          this.verificarLoja();
+        } else {
+          this.dispararMagia();
+        }
+      };
+      btnMagia.addEventListener('touchstart', acaoMagiaOuLoja, { passive: false });
+      btnMagia.addEventListener('click', acaoMagiaOuLoja);
     }
+
+    // Configuração dos botões de compra por toque no modal do mercador
+    const ligarBotaoLoja = (id, tipo) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.onclick = () => this.comprarItem(tipo);
+        el.ontouchstart = (e) => { e.preventDefault(); this.comprarItem(tipo); };
+      }
+    };
+    ligarBotaoLoja('comprar-pocao', 'pocao');
+    ligarBotaoLoja('comprar-coracao', 'coracao');
+    ligarBotaoLoja('comprar-gelo', 'gelo');
+    ligarBotaoLoja('comprar-veneno', 'veneno');
 
     const controlesMobile = document.getElementById('controles-mobile');
     if ('ontouchstart' in window || window.innerWidth <= 800) {
@@ -80,10 +105,12 @@ export class MotorJogo {
 
     const btnFecharLoja = document.getElementById('fechar-loja');
     if (btnFecharLoja) {
-      btnFecharLoja.onclick = () => {
+      const fechar = () => {
         this.lojaAberta = false;
         document.getElementById('loja-modal').style.display = 'none';
       };
+      btnFecharLoja.onclick = fechar;
+      btnFecharLoja.ontouchstart = (e) => { e.preventDefault(); fechar(); };
     }
 
     this.audio.iniciarMusicaFundo();
@@ -119,6 +146,11 @@ export class MotorJogo {
     this.obstaculos = JSON.parse(JSON.stringify(this.faseConfig.obstaculos));
     this.inimigos = JSON.parse(JSON.stringify(this.faseConfig.inimigos));
     this.moedas = JSON.parse(JSON.stringify(this.faseConfig.moedas));
+
+    // Inicializa HP máximo visível para a barra de energia dos inimigos
+    this.inimigos.forEach(ini => {
+      if (!ini.maxHp) ini.maxHp = ini.hp;
+    });
   }
 
   dispararMagia() {
@@ -152,15 +184,24 @@ export class MotorJogo {
     if (tipo === 'pocao') {
       if (this.ouro >= 20) {
         this.ouro -= 20;
-        this.jogador.hp = Math.min(this.jogador.maxHp, this.jogador.hp + 50);
+        this.jogador.vidas = 3; // Restaura todos os corações
         this.audio.compra();
-        msgEl.innerText = '✔ Poção comprada com sucesso!';
+        msgEl.innerText = '✔ Poção comprada! Todos corações restaurados.';
+      } else {
+        msgEl.innerText = '✖ Ouro insuficiente!';
+      }
+    } else if (tipo === 'coracao') {
+      if (this.ouro >= 40) {
+        this.ouro -= 40;
+        this.jogador.vidas += 1; // Aumenta +1 coração
+        this.audio.compra();
+        msgEl.innerText = '✔ Coração Extra adquirido (+1 Vida)!';
       } else {
         msgEl.innerText = '✖ Ouro insuficiente!';
       }
     } else if (tipo === 'gelo') {
       if (this.inventario.possuiItem && this.inventario.possuiItem('livro_gelo')) {
-        msgEl.innerText = '⚠ Você já possui a Lança de Gelo no grimório!';
+        msgEl.innerText = '⚠ Você já possui a Lança de Gelo!';
         return;
       }
       if (this.ouro >= 50) {
@@ -173,7 +214,7 @@ export class MotorJogo {
       }
     } else if (tipo === 'veneno') {
       if (this.inventario.possuiItem && this.inventario.possuiItem('livro_veneno')) {
-        msgEl.innerText = '⚠ Você já possui a Chuva de Veneno no grimório!';
+        msgEl.innerText = '⚠ Você já possui a Chuva de Veneno!';
         return;
       }
       if (this.ouro >= 60) {
@@ -262,6 +303,7 @@ export class MotorJogo {
 
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
+      if (!ini.maxHp) ini.maxHp = ini.hp;
 
       ini.x += ini.direcao * ini.velocidade * dt;
       if (ini.x < ini.minX || ini.x > ini.maxX) {
@@ -398,18 +440,15 @@ export class MotorJogo {
         this.ctx.fillStyle = '#22c55e';
         this.ctx.fillRect(obs.x - 4, obs.y, obs.largura + 8, 14);
       } else if (obs.tipo === 'loja') {
-        // Tenda do Mercador alinhada perfeitamente na superfície exata da grama (ty = 380 - th)[cite: 14]
         const tw = 70;
         const th = 60;
         const tx = obs.x;
         const ty = 380 - th;
 
-        // Estacas de madeira laterais
         this.ctx.fillStyle = '#78350f';
         this.ctx.fillRect(tx + 5, ty + 15, 6, th - 15);
         this.ctx.fillRect(tx + tw - 11, ty + 15, 6, th - 15);
 
-        // Lona da tenda (Estilo RPG clássico)
         this.ctx.fillStyle = '#d4b483';
         this.ctx.beginPath();
         this.ctx.moveTo(tx, ty + th);
@@ -418,7 +457,6 @@ export class MotorJogo {
         this.ctx.closePath();
         this.ctx.fill();
 
-        // Dobra central da lona
         this.ctx.fillStyle = '#c2a172';
         this.ctx.beginPath();
         this.ctx.moveTo(tx + tw / 2, ty);
@@ -427,7 +465,6 @@ export class MotorJogo {
         this.ctx.closePath();
         this.ctx.fill();
 
-        // Entrada escura da tenda
         this.ctx.fillStyle = '#291605';
         this.ctx.beginPath();
         this.ctx.moveTo(tx + tw / 2 - 12, ty + th);
@@ -436,10 +473,9 @@ export class MotorJogo {
         this.ctx.lineTo(tx + tw / 2 + 12, ty + th);
         this.ctx.fill();
 
-        // Texto indicativo
         this.ctx.fillStyle = '#fde047';
         this.ctx.font = 'bold 11px monospace';
-        this.ctx.fillText('⛺ Aperte [X] para o Mercador', tx - 35, ty - 12);
+        this.ctx.fillText('⛺ Aperte [X] ou ✨ para o Mercador', tx - 45, ty - 12);
       }
     });
 
@@ -458,6 +494,8 @@ export class MotorJogo {
 
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
+      if (!ini.maxHp) ini.maxHp = ini.hp;
+
       if (ini.ehBoss) {
         const bx = ini.x;
         const by = ini.y;
@@ -502,6 +540,19 @@ export class MotorJogo {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(ini.x + 15, ini.y + 22, 4, 6);
         this.ctx.fillRect(ini.x + 27, ini.y + 22, 4, 6);
+      }
+
+      // Barra de Energia Vital (HP) do Inimigo se ele tomou dano
+      if (ini.hp < ini.maxHp) {
+        const larguraBarra = ini.largura || 40;
+        const barraX = ini.x;
+        const barraY = ini.y - 10;
+        const porcentagemHp = Math.max(0, ini.hp / ini.maxHp);
+
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.fillRect(barraX, barraY, larguraBarra, 5);
+        this.ctx.fillStyle = '#22c55e';
+        this.ctx.fillRect(barraX, barraY, larguraBarra * porcentagemHp, 5);
       }
     });
 

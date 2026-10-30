@@ -72,18 +72,31 @@
       </div>
     </div>
 
-    <!-- Modal da Loja Estilo Feira -->
-    <div id="loja-modal" class="loja-modal" style="display: none;">
-      <h3>⛺ Barraca de Feira Mágica</h3>
-      <p>Compre itens e equipamentos (Ouro atual: 🪙 <span id="loja-ouro">0</span>):</p>
-      <ul>
-        <li>[1] Poção de Cura (+50 HP) — 🪙 20</li>
-        <li>[2] Lança de Gelo (Magia Azul) — 🪙 50</li>
-        <li>[3] Chuva de Veneno (Magia Roxa) — 🪙 60</li>
-      </ul>
-      <p id="loja-msg" style="color: #fde047; font-size: 12px; margin-top: 8px; font-weight: bold;"></p>
-      <button id="fechar-loja" class="btn-menu" style="margin-top: 10px;">Sair da Feira (X)</button>
-    </div>
+<div id="loja-modal" class="loja-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid #fde047; padding: 20px; color: #fff; z-index: 1000; width: 320px; border-radius: 8px; font-family: monospace; text-align: center;">
+  <h3 style="color: #fde047; margin-top: 0;">⛺ Barraca do Mercador</h3>
+  <p style="font-size: 12px; margin-bottom: 15px;">Compre itens e equipamentos<br>(Ouro atual: 🥷 <span id="loja-ouro">0</span>):</p>
+  
+  <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 11px;">
+    <button id="comprar-pocao" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
+      <span>[1] Poção (Cura Total)</span> <span>🪙 20</span>
+    </button>
+    <button id="comprar-coracao" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
+      <span>[2] Coração Extra (+1 Vida)</span> <span>🪙 40</span>
+    </button>
+    <button id="comprar-gelo" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
+      <span>[3] Lança de Gelo (Magia)</span> <span>🪙 50</span>
+    </button>
+    <button id="comprar-veneno" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
+      <span>[4] Chuva de Veneno (Magia)</span> <span>🪙 60</span>
+    </button>
+  </div>
+
+  <p id="loja-msg" style="font-size: 11px; margin: 10px 0; color: #38bdf8; min-height: 15px;"></p>
+
+  <button id="fechar-loja" style="background: #991b1b; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;">Sair do Mercador (X)</button>
+</div>
+  </button>
+</div>
 
     <!-- Inventário Lateral -->
     <div id="inventario-container" style="display: none;">
