@@ -130,7 +130,7 @@ export class MotorJogo {
       btnFecharLoja.ontouchstart = (e) => { e.preventDefault(); fechar(); };
     }
 
-    // Lógica do Botão do Grimório (Dentro do Header)
+    // Botão do Grimório no Header
     const btnGrimorio = document.getElementById('btn-grimorio');
     if (btnGrimorio) {
       const toggle = (e) => { e.preventDefault(); this.toggleGrimorio(); };
@@ -446,6 +446,12 @@ export class MotorJogo {
   renderizar() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Lógica de Escala para Mobile
+    const escala = Math.min(this.canvas.width / 800, this.canvas.height / 500);
+    this.ctx.save();
+    this.ctx.translate((this.canvas.width - 800 * escala) / 2, (this.canvas.height - 500 * escala) / 2);
+    this.ctx.scale(escala, escala);
+
     this.ctx.save();
     this.ctx.translate(-Math.floor(this.cameraX), 0);
 
@@ -482,6 +488,7 @@ export class MotorJogo {
     }
 
     this.ctx.restore();
+    this.ctx.restore(); // Restaura a escala (Mobile)
   }
 
   loop(tempoAtual) {

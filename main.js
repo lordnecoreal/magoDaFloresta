@@ -17,20 +17,15 @@ window.addEventListener('DOMContentLoaded', () => {
   const selectVidas = document.getElementById('select-vidas');
   const valVidas = document.getElementById('val-vidas');
 
-  // Atualiza os textos dos sliders
   rangeVolume.oninput = (e) => valVolume.innerText = e.target.value;
   selectVidas.oninput = (e) => valVidas.innerText = e.target.value;
 
   // Lógica da Janela de Instruções
   if (btnInstrucoes && modalInstrucoes) {
-    btnInstrucoes.onclick = () => {
-      modalInstrucoes.style.display = 'flex';
-    };
+    btnInstrucoes.onclick = () => { modalInstrucoes.style.display = 'flex'; };
   }
   if (btnFecharInstrucoes && modalInstrucoes) {
-    btnFecharInstrucoes.onclick = () => {
-      modalInstrucoes.style.display = 'none';
-    };
+    btnFecharInstrucoes.onclick = () => { modalInstrucoes.style.display = 'none'; };
   }
 
   // Inicia o Jogo
@@ -44,16 +39,22 @@ window.addEventListener('DOMContentLoaded', () => {
     hud.style.display = 'flex';
     
     if (btnGrimorio) {
-      btnGrimorio.style.display = 'flex'; // Mostra o botão do grimório no lado direito
+      btnGrimorio.style.display = 'flex';
     }
 
     if ('ontouchstart' in window || window.innerWidth <= 800) {
       controlesMobile.style.display = 'flex';
     }
 
-    // Garante que o canvas tenha o tamanho correto antes de iniciar
-    canvas.width = 800;
-    canvas.height = 500;
+    // Mantém o canvas no tamanho exato da tela do celular para não cortar
+    const isMobile = 'ontouchstart' in window || window.innerWidth <= 800;
+    if (isMobile) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    } else {
+      canvas.width = 800;
+      canvas.height = 500;
+    }
 
     const jogo = new MotorJogo(canvas, config);
     jogo.iniciar();
