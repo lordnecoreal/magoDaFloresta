@@ -14,11 +14,13 @@ export class SistemaInventario {
 
   adicionarItem(tipoItem) {
     const mapa = {
-      livro_fogo: { nome: 'Chama Arcana', cor: '#ef4444', magia: 'Chama Arcana (Z)', corProj: '#ef4444', tipoProj: 'fogo' },
-      livro_gelo: { nome: 'Lança Gelo', cor: '#3b82f6', magia: 'Lança Gelo (Z)', corProj: '#38bdf8', tipoProj: 'gelo' },
-      livro_veneno: { nome: 'Chuva Veneno', cor: '#a855f7', magia: 'Chuva Veneno (Z)', corProj: '#c084fc', tipoProj: 'veneno' },
-      livro_cura: { nome: 'Aura Curativa', cor: '#22c55e', magia: 'Aura Curativa (Z)', corProj: '#4ade80', tipoProj: 'cura' }
+      livro_fogo: { nome: 'Chama Arcana', cor: '#ef4444', magia: 'Chama Arcana (Z)', corProj: '#ef4444', tipoProjetil: 'fogo' },
+      livro_gelo: { nome: 'Lança Gelo', cor: '#3b82f6', magia: 'Lança Gelo (Z)', corProj: '#38bdf8', tipoProjetil: 'gelo' },
+      livro_veneno: { nome: 'Chuva Veneno', cor: '#a855f7', magia: 'Chuva Veneno (Z)', corProj: '#c084fc', tipoProjetil: 'veneno' },
+      livro_trovao: { nome: 'Raio Trovejante', cor: '#fde047', magia: 'Raio Trovejante (Z)', corProj: '#fde047', tipoProjetil: 'trovao' }, // <--- NOVO
+      livro_cura: { nome: 'Aura Curativa', cor: '#22c55e', magia: 'Aura Curativa (Z)', corProj: '#4ade80', tipoProjetil: 'cura' }
     };
+  
 
     const info = mapa[tipoItem];
     if (!info) return false;

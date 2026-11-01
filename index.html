@@ -8,16 +8,17 @@
 </head>
 <body>
 
-  <div id="game-container">
-    <!-- Menu Inicial com Instruções -->
+  <main id="game-container">
+    <!-- Menu Inicial -->
     <div id="menu-inicial" class="menu-overlay">
       <h1>O Mago da Floresta</h1>
       <p class="subtitulo">O Resgate do Felino - Edição Definitiva</p>
       
       <div class="menu-opcoes">
         <button id="btn-iniciar" class="btn-menu">▶ Iniciar Jogo</button>
+        <button id="btn-instrucoes" class="btn-menu" style="background: #0284c7; border-color: #38bdf8; box-shadow: 0 4px #082f49;">📖 Como Jogar</button>
         
-        <div class="menu-grupo">
+        <div class="menu-grupo" style="margin-top: 10px;">
           <label for="range-volume">Volume do Som: <span id="val-volume">80</span>%</label>
           <input type="range" id="range-volume" min="0" max="100" value="80">
         </div>
@@ -26,22 +27,51 @@
           <label for="select-vidas">Vidas Iniciais (Max 5): <span id="val-vidas">3</span></label>
           <input type="range" id="select-vidas" min="1" max="5" value="3">
         </div>
-
-        <div class="instrucoes-box">
-          <p><strong>Comandos:</strong></p>
-          <p>⬅️ ➡️ Mover / ⬆️ ou [Espaço] Pular</p>
-          <p>[Z] Disparar Magia / [X] Abrir Loja</p>
-        </div>
       </div>
     </div>
 
+    <!-- Modal de Instruções -->
+    <div id="modal-instrucoes" class="menu-overlay" style="display: none; background: rgba(9, 13, 22, 0.95);">
+      <div class="painel-instrucoes">
+        <h2>Como Jogar</h2>
+        
+        <div class="instrucao-secao">
+          <h3>Controles</h3>
+          <p><strong>PC:</strong> ⬅️ ➡️ Mover | [Espaço] Pular | [Z] Magia | [X] Loja | [G] Grimório</p>
+          <p><strong>Mobile:</strong> Use os botões na tela. Toque em ✨ perto da Loja para abri-la.</p>
+        </div>
 
-    
-    <!-- HUD superior -->
-    <div id="hud" style="display: none;">
+        <div class="instrucao-secao">
+          <h3>Magias e Status</h3>
+          <ul>
+            <li><span style="color: #ef4444;">🔥 Fogo:</span> 15 de dano. Pode causar <b>Queimadura</b> (dano contínuo).</li>
+            <li><span style="color: #38bdf8;">❄️ Gelo:</span> 25 de dano. Pode causar <b>Congelamento</b> (paralisa o inimigo).</li>
+            <li><span style="color: #a855f7;">☠️ Veneno:</span> 30 de dano. Pode causar <b>Envenenamento</b> (dano contínuo forte).</li>
+            <li><span style="color: #fde047;">⚡ Trovão:</span> 60 de dano. Pode causar <b>Lentidão</b> no inimigo por 5s.</li>
+          </ul>
+        </div>
+
+        <div class="instrucao-secao">
+          <h3>Dicas</h3>
+          <p>Inimigos têm fraquezas (ex: Goblins odeiam Gelo). Causar dano na fraqueza dá +10 de bônus! Se o HP zerar, você perde um coração.</p>
+        </div>
+
+        <button id="btn-fechar-instrucoes" class="btn-menu" style="margin-top: 20px;">Voltar ao Menu</button>
+      </div>
+    </div>
+
+    <!-- HUD Superior (Agora como <header>) -->
+    <header id="hud" style="display: none;">
       <div class="hud-box">
-        <div>MAGO HP: <span id="hud-hp">100</span>/<span id="hud-maxhp">100</span></div>
-        <div>MANA: <span id="hud-mana">100</span>/100</div>
+        <div>MAGO</div>
+        <div class="barra-container">
+          <div id="barra-hp" class="barra-preenchimento hp"></div>
+          <span class="barra-texto"><span id="hud-hp">100</span>/<span id="hud-maxhp">100</span> HP</span>
+        </div>
+        <div class="barra-container">
+          <div id="barra-mana" class="barra-preenchimento mana"></div>
+          <span class="barra-texto"><span id="hud-mana">100</span>/<span id="hud-maxmana">100</span> MP</span>
+        </div>
       </div>
       <div class="hud-box">
         <div>VIDAS: <span id="hud-vidas-texto">❤️❤️❤️</span></div>
@@ -51,61 +81,71 @@
       <div class="hud-box">
         <div>MUNDO: <span id="hud-fase">1-1</span></div>
       </div>
+      
+      <!-- Botão do Grimório no meio do Header -->
+      <button id="btn-grimorio" class="btn-grimorio-header" style="display: none;">
+        📕
+      </button>
+
       <div class="hud-box magia-box">
         MAGIA: <span id="hud-magia">Chama Arcana</span>
       </div>
-    </div>
+    </header>
 
-    <!-- Tela do Jogo (Canvas) -->
+    <!-- Tela do Jogo -->
     <canvas id="gameCanvas" width="800" height="500"></canvas>
 
-    <!-- Controles Touch Mobile -->
+    <!-- Controles Touch -->
     <div id="controles-mobile" style="display: none;">
       <div class="controles-esq">
         <button id="btn-esq" class="btn-touch">◀</button>
         <button id="btn-dir" class="btn-touch">▶</button>
       </div>
       <div class="controles-dir">
-       
-      <button id="btn-magia" class="btn-touch btn-acao">✨ Magia</button>
+        <button id="btn-magia" class="btn-touch btn-acao">✨ Magia</button>
         <button id="btn-pulo" class="btn-touch btn-acao">🔼 Pulo</button>
       </div>
     </div>
 
-<div id="loja-modal" class="loja-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid #fde047; padding: 20px; color: #fff; z-index: 1000; width: 320px; border-radius: 8px; font-family: monospace; text-align: center;">
-  <h3 style="color: #fde047; margin-top: 0;">⛺ Barraca do Mercador</h3>
-  <p style="font-size: 12px; margin-bottom: 15px;">Compre itens e equipamentos<br>(Ouro atual: 🥷 <span id="loja-ouro">0</span>):</p>
-  
-  <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 11px;">
-    <button id="comprar-pocao" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
-      <span>[1] Poção (Cura Total)</span> <span>🪙 20</span>
-    </button>
-    <button id="comprar-coracao" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
-      <span>[2] Coração Extra (+1 Vida)</span> <span>🪙 40</span>
-    </button>
-    <button id="comprar-gelo" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
-      <span>[3] Lança de Gelo (Magia)</span> <span>🪙 50</span>
-    </button>
-    <button id="comprar-veneno" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between;">
-      <span>[4] Chuva de Veneno (Magia)</span> <span>🪙 60</span>
-    </button>
-  </div>
-
-  <p id="loja-msg" style="font-size: 11px; margin: 10px 0; color: #38bdf8; min-height: 15px;"></p>
-
-  <button id="fechar-loja" style="background: #991b1b; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;">Sair do Mercador (X)</button>
-</div>
-  </button>
-</div>
-
-    <!-- Inventário Lateral -->
-    <div id="inventario-container" style="display: none;">
-      <div class="inventario-header">
-        <span>Grimório</span>
+    <!-- Loja -->
+    <div id="loja-modal" class="loja-modal" style="display: none;">
+      <h3>⛺ Barraca do Mercador</h3>
+      <p style="font-size: 12px; margin-bottom: 15px;">Ouro atual: 🪙 <span id="loja-ouro">0</span></p>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 11px; max-height: 250px; overflow-y: auto; padding-right: 5px;">
+        <button id="comprar-pocao" class="btn-loja">
+          <span>[1] Poção (Cura Total)</span> <span>🪙 20</span>
+        </button>
+        <button id="comprar-coracao" class="btn-loja">
+          <span>[2] Coração Extra (+1 Vida)</span> <span>🪙 40</span>
+        </button>
+        <button id="comprar-gelo" class="btn-loja">
+          <span>[3] Lança de Gelo</span> <span>🪙 50</span>
+        </button>
+        <button id="comprar-veneno" class="btn-loja">
+          <span>[4] Chuva de Veneno</span> <span>🪙 60</span>
+        </button>
+        <button id="comprar-trovao" class="btn-loja">
+          <span>[5] Raio Trovejante</span> <span>🪙 70</span>
+        </button>
+        <button id="comprar-hp" class="btn-loja">
+          <span>[6] Poção de Vida (+100 HP)</span> <span>🪙 50</span>
+        </button>
+        <button id="comprar-mana" class="btn-loja">
+          <span>[7] Poção de Mana (+100 MP)</span> <span>🪙 50</span>
+        </button>
       </div>
+
+      <p id="loja-msg" style="font-size: 11px; margin: 10px 0; color: #38bdf8; min-height: 15px;"></p>
+      <button id="fechar-loja" style="background: #991b1b; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;">Sair do Mercador (X)</button>
+    </div>
+
+    <!-- Inventário (Abre do lado direito) -->
+    <div id="inventario-container" style="display: none;">
+      <div class="inventario-header"><span>Grimório</span></div>
       <div id="inventario-grid" class="inventario-grid"></div>
     </div>
-  </div>
+  </main>
 
   <script type="module" src="main.js"></script>
 </body>

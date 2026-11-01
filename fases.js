@@ -1,19 +1,19 @@
 export function gerarFases() {
   const fases = {};
-  const totalMundos = 5;
+  const totalMundos = 4;
+  const fasesPorMundo = 4;
 
   const temasMundos = {
     1: { nome: "Floresta Mágica", corChao: '#166534', corFolhas: '#14532d', bg: '#090d16' },
-    2: { nome: "Mata com Cachoeira", corChao: '#0369a1', corFolhas: '#0284c7', bg: '#06283d' },
+    2: { nome: "Mato da Cachoeira", corChao: '#064e3b', corFolhas: '#065f46', bg: '#022c22' },
     3: { nome: "Cemitério da Capela", corChao: '#27272a', corFolhas: '#475569', bg: '#1e1b4b' },
-    4: { nome: "Interior da Capela", corChao: '#3f3f46', corFolhas: '#71717a', bg: '#18181b' },
-    5: { nome: "Masmorra do Chefe Final", corChao: '#18181b', corFolhas: '#27272a', bg: '#090d16' }
+    4: { nome: "Masmorra da Capela", corChao: '#3f3f46', corFolhas: '#71717a', bg: '#18181b' }
   };
 
   for (let mundo = 1; mundo <= totalMundos; mundo++) {
-    for (let sub = 1; sub <= 3; sub++) {
+    for (let sub = 1; sub <= fasesPorMundo; sub++) {
       const chave = `${mundo}-${sub}`;
-      const ehChefao = (sub === 3);
+      const ehChefao = (sub === 4);
       const tema = temasMundos[mundo];
 
       const larguraFase = ehChefao ? 2500 : 3200 + mundo * 200;
@@ -21,31 +21,31 @@ export function gerarFases() {
         { tipo: 'chao', x: 0, y: 380, largura: larguraFase, altura: 120, cor: tema.corChao }
       ];
 
-      // Plataformas acessíveis (altura ideal para o pulo de 450)
+      // Plataformas acessíveis (Y mais alto para não prender o cogumelo)
       if (!ehChefao) {
         if (sub === 1) {
           obstaculos.push(
-            { tipo: 'plataforma', x: 400, y: 290, largura: 110, height: 20 },
-            { tipo: 'plataforma', x: 800, y: 240, largura: 120, height: 20 },
-            { tipo: 'plataforma', x: 1300, y: 270, largura: 100, height: 20 }
+            { tipo: 'plataforma', x: 400, y: 250, largura: 110, altura: 20 },
+            { tipo: 'plataforma', x: 800, y: 220, largura: 120, altura: 20 },
+            { tipo: 'plataforma', x: 1300, y: 240, largura: 100, altura: 20 }
           );
         } else {
           obstaculos.push(
-            { tipo: 'plataforma', x: 500, y: 260, largura: 130, height: 20 },
-            { tipo: 'plataforma', x: 1000, y: 220, largura: 110, height: 20 },
-            { tipo: 'plataforma', x: 1500, y: 250, largura: 120, height: 20 }
+            { tipo: 'plataforma', x: 500, y: 230, largura: 130, altura: 20 },
+            { tipo: 'plataforma', x: 1000, y: 200, largura: 110, altura: 20 },
+            { tipo: 'plataforma', x: 1500, y: 220, largura: 120, altura: 20 }
           );
         }
-        // Mercador aparece apenas nas fases 1 e 2 de cada mundo (NUNCA no chefe)
-        obstaculos.push({ tipo: 'loja', x: 1100, y: 280, largura: 100, height: 100 });
+        // Mercador (Y: 380 - 60 = 320, para bater no chão)
+        obstaculos.push({ tipo: 'loja', x: 1100, y: 280, largura: 100, altura: 100 });
       } else {
         obstaculos.push(
-          { tipo: 'plataforma', x: 700, y: 270, largura: 140, height: 20 },
-          { tipo: 'plataforma', x: 1400, y: 230, largura: 140, height: 20 }
+          { tipo: 'plataforma', x: 700, y: 250, largura: 140, altura: 20 },
+          { tipo: 'plataforma', x: 1400, y: 220, largura: 140, altura: 20 }
         );
       }
 
-      // Árvores ou Elementos de Cenário únicos por mundo
+      // Árvores de fundo
       const numElementos = ehChefao ? 3 : 5;
       for (let a = 0; a < numElementos; a++) {
         obstaculos.push({
@@ -62,23 +62,47 @@ export function gerarFases() {
       // Moedas
       const moedas = [];
       for (let m = 200; m < larguraFase - 200; m += 180) {
-        moedas.push({ x: m, y: 310, largura: 18, height: 18, coletada: false });
+        moedas.push({ x: m, y: 310, largura: 18, altura: 18, coletada: false });
       }
 
-      // Inimigos e Chefes específicos
       const inimigos = [];
+      
+      // INIMIGOS NORMAIS
       if (!ehChefao) {
-        inimigos.push(
-          { id: 1, x: 700, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: -1, velocidade: 60 + mundo * 5, hp: 2 + mundo, tipo: mundo === 3 ? 'fantasma' : 'cogumelo', minX: 400, maxX: 1000 },
-          { id: 2, x: 1600, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: 1, velocidade: 60 + mundo * 5, hp: 2 + mundo, tipo: mundo === 2 ? 'fantasma' : 'cogumelo', minX: 1200, maxX: 1900 }
-        );
-      } else {
-        let nomeBoss = `Guardião do Mundo ${mundo}`;
-        if (mundo === 1) nomeBoss = "Lorde Cogumelo da Floresta";
-        if (mundo === 2) nomeBoss = "Monstro da Cachoeira";
-        if (mundo === 3) nomeBoss = "Espectro da Capela";
-        if (mundo === 4) nomeBoss = "Guardião Interno";
-        if (mundo === 5) nomeBoss = "Imperatriz Sombria (Chefe Final)";
+        if (mundo === 1) {
+          inimigos.push(
+            { id: 1, x: 700, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: -1, velocidade: 60, hp: 100, maxHp: 100, tipo: 'cogumelo', minX: 400, maxX: 1000, fraqueza: 'fogo' },
+            { id: 2, x: 1600, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: 1, velocidade: 60, hp: 100, maxHp: 100, tipo: 'cogumelo', minX: 1200, maxX: 1900, fraqueza: 'fogo' }
+          );
+        } else if (mundo === 2) {
+          inimigos.push(
+            { id: 1, x: 700, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: -1, velocidade: 70, hp: 150, maxHp: 150, tipo: 'sapo', minX: 400, maxX: 1000, fraqueza: 'trovao' },
+            { id: 2, x: 1600, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: 1, velocidade: 70, hp: 150, maxHp: 150, tipo: 'sapo', minX: 1200, maxX: 1900, fraqueza: 'trovao' }
+          );
+        } else if (mundo === 3) {
+          inimigos.push(
+            { id: 1, x: 700, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: -1, velocidade: 80, hp: 200, maxHp: 200, tipo: 'fantasma', minX: 400, maxX: 1000, fraqueza: 'veneno' },
+            { id: 2, x: 1600, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: 1, velocidade: 80, hp: 200, maxHp: 200, tipo: 'fantasma', minX: 1200, maxX: 1900, fraqueza: 'veneno' }
+          );
+        } else if (mundo === 4) {
+          inimigos.push(
+            { id: 1, x: 700, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: -1, velocidade: 90, hp: 250, maxHp: 250, tipo: 'esqueleto', minX: 400, maxX: 1000, fraqueza: 'fogo' },
+            { id: 2, x: 1600, y: 334, largura: 46, altura: 46, estado: 'vivo', direcao: 1, velocidade: 90, hp: 250, maxHp: 250, tipo: 'esqueleto', minX: 1200, maxX: 1900, fraqueza: 'fogo' }
+          );
+        }
+      } 
+      // CHEFES ÚNICOS
+      else {
+        let boss = {};
+        if (mundo === 1) { 
+          boss = { nome: "Goblin Lorde", hp: 500, tipo: 'goblin', fraqueza: 'gelo', cor: '#65a30d' };
+        } else if (mundo === 2) { 
+          boss = { nome: "Sapo Ancião", hp: 800, tipo: 'sapo_boss', fraqueza: 'trovao', cor: '#22c55e' };
+        } else if (mundo === 3) { 
+          boss = { nome: "Cavaleiro Espectral", hp: 1200, tipo: 'cavaleiro', fraqueza: 'fogo', cor: '#a855f7' };
+        } else if (mundo === 4) { 
+          boss = { nome: "Imperatriz Sombria", hp: 2000, tipo: 'imperatriz', fraqueza: 'trovao', cor: '#991b1b' };
+        }
 
         inimigos.push({
           id: 99,
@@ -89,17 +113,60 @@ export function gerarFases() {
           estado: 'vivo',
           direcao: -1,
           velocidade: 45 + mundo * 10,
-          hp: 15 + mundo * 8,
+          hp: boss.hp,
+          maxHp: boss.hp,
           ehBoss: true,
-          nome: nomeBoss,
-          tipo: mundo === 3 ? 'fantasma' : 'dragao',
+          nome: boss.nome,
+          tipo: boss.tipo,
+          fraqueza: boss.fraqueza,
+          cor: boss.cor,
           minX: larguraFase - 900,
           maxX: larguraFase - 300
         });
+
+        // Fase Final (Mundo 4-4): Adiciona a gaiola e o gatinho (inimigo pacífico)
+        if (mundo === 4 && sub === 4) {
+           obstaculos.push({ tipo: 'gaiola', x: larguraFase - 300, y: 280, largura: 60, altura: 100 });
+           
+           // O gatinho é um inimigo especial que não se move e não dá dano
+           inimigos.push({
+             id: 100,
+             x: larguraFase - 290,
+             y: 330,
+             largura: 40, altura: 40,
+             estado: 'vivo',
+             direcao: 1,
+             velocidade: 0,
+             hp: 1, maxHp: 1,
+             tipo: 'gatinho',
+             minX: 0, maxX: 0
+           });
+        }
       }
 
       let nomeFase = `${tema.nome} - Parte ${sub}`;
-      if (ehChefao) nomeFase = `Confronto: ${inimigos[0].nome}`;
+      // Substitua o bloco de plataformas por este:
+      if (!ehChefao) {
+        if (sub === 1) {
+          obstaculos.push(
+            { tipo: 'plataforma', x: 400, y: 300, largura: 110, altura: 20 },
+            { tipo: 'plataforma', x: 800, y: 280, largura: 120, altura: 20 },
+            { tipo: 'plataforma', x: 1300, y: 300, largura: 100, altura: 20 }
+          );
+        } else {
+          obstaculos.push(
+            { tipo: 'plataforma', x: 500, y: 290, largura: 130, altura: 20 },
+            { tipo: 'plataforma', x: 1000, y: 270, largura: 110, altura: 20 },
+            { tipo: 'plataforma', x: 1500, y: 290, largura: 120, altura: 20 }
+          );
+        }
+        obstaculos.push({ tipo: 'loja', x: 1100, y: 280, largura: 100, altura: 100 });
+      } else {
+        obstaculos.push(
+          { tipo: 'plataforma', x: 700, y: 300, largura: 140, altura: 20 },
+          { tipo: 'plataforma', x: 1400, y: 280, largura: 140, altura: 20 }
+        );
+      }
 
       fases[chave] = {
         nome: nomeFase,

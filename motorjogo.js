@@ -1,6 +1,9 @@
 import { gerarFases } from './fases.js';
 import { SistemaInventario } from './inventario.js';
 import { SistemaAudio } from './audio.js';
+import { SistemaInimigos } from './inimigos.js';
+import { SistemaJogador } from './jogador.js';
+import { SistemaCenario } from './cenario.js';
 
 export class MotorJogo {
   constructor(canvas, configInicial = { volume: 0.5, vidas: 3 }, onVoltarMenu = null) {
@@ -10,7 +13,7 @@ export class MotorJogo {
     
     this.audio = new SistemaAudio(configInicial.volume);
     this.vidasIniciais = configInicial.vidas;
-    this.maxVidasPermitidas = 10; // Limite máximo de 10 corações para vendas
+    this.maxVidasPermitidas = 10;
 
     this.fases = gerarFases();
     this.mundoAtualIndex = 1;
@@ -18,8 +21,10 @@ export class MotorJogo {
 
     this.pontos = 0;
     this.ouro = 80;
+    this.precoCoracao = 40;
     this.tempoAnterior = 0;
     this.lojaAberta = false;
+    this.inventarioAberto = false;
     this.animacaoFrame = 0;
     this.tempoInvulneravel = 0;
 
@@ -27,6 +32,10 @@ export class MotorJogo {
       if (this.jogador) {
         this.jogador.tipoMagia = item.magia;
         this.jogador.corProj = item.corProj || '#ef4444';
+        this.jogador.tipoProjetil = item.tipoProjetil || 'fogo';
+        
+        const hudMagia = document.getElementById('hud-magia');
+        if (hudMagia) hudMagia.innerText = item.nome;
       }
     });
 
@@ -41,18 +50,25 @@ export class MotorJogo {
       if (e.code === 'KeyX' || e.code === 'KeyK') {
         this.verificarLoja();
       }
+      
+      // Atalho do Grimório (Tecla G)
+      if (e.code === 'KeyG') {
+        this.toggleGrimorio();
+      }
 
       if (this.lojaAberta) {
         if (e.code === 'Digit1') this.comprarItem('pocao');
         if (e.code === 'Digit2') this.comprarItem('coracao');
         if (e.code === 'Digit3') this.comprarItem('gelo');
         if (e.code === 'Digit4') this.comprarItem('veneno');
+        if (e.code === 'Digit5') this.comprarItem('trovao');
+        if (e.code === 'Digit6') this.comprarItem('hp');
+        if (e.code === 'Digit7') this.comprarItem('mana');
       }
     });
 
     window.addEventListener('keyup', e => this.teclas[e.code] = false);
 
-    // Controles Mobile / Touch
     const configurarBotaoTouch = (id, acaoInicio, acaoFim) => {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -66,7 +82,6 @@ export class MotorJogo {
     configurarBotaoTouch('btn-dir', () => this.teclas['KeyD'] = true, () => this.teclas['KeyD'] = false);
     configurarBotaoTouch('btn-pulo', () => this.teclas['Space'] = true, () => this.teclas['Space'] = false);
     
-    // Botão de Ataque / Magia ou Interagir com a Tenda do Mercador
     const btnMagia = document.getElementById('btn-magia');
     if (btnMagia) {
       btnMagia.innerHTML = '✨';
@@ -74,7 +89,8 @@ export class MotorJogo {
         e.preventDefault();
         if (!this.jogador) return;
         const loja = this.obstaculos.find(o => o.tipo === 'loja');
-        if (loja && Math.abs(this.jogador.x - loja.x) < 90) {
+        
+        if (loja && Math.abs(this.jogador.x - loja.x) < 120 && Math.abs(this.jogador.y - 380) < 80) {
           this.verificarLoja();
         } else {
           this.dispararMagia();
@@ -84,7 +100,6 @@ export class MotorJogo {
       btnMagia.addEventListener('click', acaoMagiaOuLoja);
     }
 
-    // Compras no Mercador ao toque
     const ligarBotaoLoja = (id, tipo) => {
       const el = document.getElementById(id);
       if (el) {
@@ -96,6 +111,9 @@ export class MotorJogo {
     ligarBotaoLoja('comprar-coracao', 'coracao');
     ligarBotaoLoja('comprar-gelo', 'gelo');
     ligarBotaoLoja('comprar-veneno', 'veneno');
+    ligarBotaoLoja('comprar-trovao', 'trovao');
+    ligarBotaoLoja('comprar-hp', 'hp');
+    ligarBotaoLoja('comprar-mana', 'mana');
 
     const controlesMobile = document.getElementById('controles-mobile');
     if ('ontouchstart' in window || window.innerWidth <= 800) {
@@ -112,8 +130,29 @@ export class MotorJogo {
       btnFecharLoja.ontouchstart = (e) => { e.preventDefault(); fechar(); };
     }
 
+    // Lógica do Botão do Grimório (Dentro do Header)
+    const btnGrimorio = document.getElementById('btn-grimorio');
+    if (btnGrimorio) {
+      const toggle = (e) => { e.preventDefault(); this.toggleGrimorio(); };
+      btnGrimorio.onclick = toggle;
+      btnGrimorio.ontouchstart = toggle;
+    }
+
     this.audio.iniciarMusicaFundo();
     this.carregarFase(`${this.mundoAtualIndex}-${this.subFaseIndex}`);
+  }
+
+  toggleGrimorio() {
+    this.inventarioAberto = !this.inventarioAberto;
+    const invContainer = document.getElementById('inventario-container');
+    const btnGrimorio = document.getElementById('btn-grimorio');
+    
+    if (invContainer) {
+      invContainer.style.display = this.inventarioAberto ? 'block' : 'none';
+    }
+    if (btnGrimorio) {
+      btnGrimorio.innerText = this.inventarioAberto ? '📖' : '📕';
+    }
   }
 
   carregarFase(chave) {
@@ -125,26 +164,21 @@ export class MotorJogo {
 
     const vidasAtuais = this.jogador ? this.jogador.vidas : this.vidasIniciais;
     const maxVidasAtuais = this.jogador ? this.jogador.maxVidas : this.vidasIniciais;
+    const magiaAtual = this.jogador ? this.jogador.tipoProjetil : 'fogo';
+    const corAtual = this.jogador ? this.jogador.corProj : '#ef4444';
+    const tipoMagiaAtual = this.jogador ? this.jogador.tipoMagia : 'Chama Arcana (Z)';
+    
+    const hpAtual = this.jogador ? this.jogador.hp : 100;
+    const maxHpAtual = this.jogador ? this.jogador.maxHp : 100;
+    const manaAtual = this.jogador ? this.jogador.mana : 100;
+    const maxManaAtual = this.jogador ? this.jogador.maxMana : 100;
 
-    this.jogador = {
-      x: 60,
-      y: 280,
-      largura: 36,
-      altura: 52,
-      vx: 0,
-      vy: 0,
-      hp: 100,
-      maxHp: 100,
-      mana: 100,
-      maxMana: 100,
-      vidas: vidasAtuais,
-      maxVidas: maxVidasAtuais,
-      noChao: false,
-      direcao: 1,
-      tipoMagia: 'Chama Arcana (Z)',
-      corProj: '#ef4444',
-      projeteis: []
-    };
+    this.jogador = SistemaJogador.criar(vidasAtuais, magiaAtual, corAtual, tipoMagiaAtual);
+    this.jogador.maxVidas = maxVidasAtuais;
+    this.jogador.hp = hpAtual;
+    this.jogador.maxHp = maxHpAtual;
+    this.jogador.mana = manaAtual;
+    this.jogador.maxMana = maxManaAtual;
 
     this.obstaculos = JSON.parse(JSON.stringify(this.faseConfig.obstaculos));
     this.inimigos = JSON.parse(JSON.stringify(this.faseConfig.inimigos));
@@ -152,6 +186,8 @@ export class MotorJogo {
 
     this.inimigos.forEach(ini => {
       if (!ini.maxHp) ini.maxHp = ini.hp;
+      ini.queimando = 0; ini.congelado = 0; ini.envenenado = 0; ini.eletrocutado = 0;
+      ini.velocidadeBase = ini.velocidade;
     });
   }
 
@@ -159,100 +195,149 @@ export class MotorJogo {
     if (this.jogador.mana < 15) return;
     this.jogador.mana -= 15;
     this.audio.magia();
+    this.jogador.animacaoAtaque = 1;
 
     this.jogador.projeteis.push({
       x: this.jogador.direcao > 0 ? this.jogador.x + this.jogador.largura : this.jogador.x - 20,
-      y: this.jogador.y + 18,
-      largura: 18,
-      altura: 12,
-      vx: this.jogador.direcao * 450,
-      cor: this.jogador.corProj
+      y: this.jogador.y + 18, largura: 18, altura: 12,
+      vx: this.jogador.direcao * 450, cor: this.jogador.corProj, tipo: this.jogador.tipoProjetil
     });
   }
 
   verificarLoja() {
     if (this.faseConfig.chefao) return;
     const loja = this.obstaculos.find(o => o.tipo === 'loja');
-    if (loja && Math.abs(this.jogador.x - loja.x) < 90) {
+    if (loja && Math.abs(this.jogador.x - loja.x) < 120) {
       this.lojaAberta = !this.lojaAberta;
       document.getElementById('loja-modal').style.display = this.lojaAberta ? 'block' : 'none';
-      document.getElementById('loja-ouro').innerText = this.ouro;
+      this.atualizarLojaVisual();
       document.getElementById('loja-msg').innerText = '';
     }
   }
 
+  atualizarLojaVisual() {
+    document.getElementById('loja-ouro').innerText = this.ouro;
+    const btnCoracao = document.getElementById('comprar-coracao');
+    if (btnCoracao) {
+       btnCoracao.innerHTML = `<span>[2] Coração Extra (+1 Vida)</span> <span>🪙 ${this.precoCoracao}</span>`;
+    }
+
+    const btnGelo = document.getElementById('comprar-gelo');
+    if (btnGelo) btnGelo.style.display = (this.inventario.possuiItem && this.inventario.possuiItem('livro_gelo')) ? 'none' : 'flex';
+    
+    const btnVeneno = document.getElementById('comprar-veneno');
+    if (btnVeneno) btnVeneno.style.display = (this.inventario.possuiItem && this.inventario.possuiItem('livro_veneno')) ? 'none' : 'flex';
+    
+    const btnTrovao = document.getElementById('comprar-trovao');
+    if (btnTrovao) btnTrovao.style.display = (this.inventario.possuiItem && this.inventario.possuiItem('livro_trovao')) ? 'none' : 'flex';
+
+    this.atualizarHUD();
+  }
+
+  atualizarHUD() {
+    const elVidas = document.getElementById('hud-vidas-texto');
+    if (elVidas) elVidas.innerText = '❤️'.repeat(Math.max(0, this.jogador.vidas));
+    
+    const barraHp = document.getElementById('barra-hp');
+    if (barraHp) barraHp.style.width = `${(this.jogador.hp / this.jogador.maxHp) * 100}%`;
+    
+    const barraMana = document.getElementById('barra-mana');
+    if (barraMana) barraMana.style.width = `${(this.jogador.mana / this.jogador.maxMana) * 100}%`;
+
+    const hudHp = document.getElementById('hud-hp');
+    if (hudHp) hudHp.innerText = Math.floor(this.jogador.hp);
+    const hudMaxHp = document.getElementById('hud-maxhp');
+    if (hudMaxHp) hudMaxHp.innerText = this.jogador.maxHp;
+    
+    const hudMana = document.getElementById('hud-mana');
+    if (hudMana) hudMana.innerText = Math.floor(this.jogador.mana);
+    
+    const hudMaxMana = document.getElementById('hud-maxmana');
+    if (hudMaxMana) hudMaxMana.innerText = this.jogador.maxMana;
+
+    const hudOuro = document.getElementById('hud-ouro');
+    if (hudOuro) hudOuro.innerText = this.ouro;
+    const hudPontos = document.getElementById('hud-pontos');
+    if (hudPontos) hudPontos.innerText = String(this.pontos).padStart(6, '0');
+    const hudFase = document.getElementById('hud-fase');
+    if (hudFase) hudFase.innerText = `${this.mundoAtualIndex}-${this.subFaseIndex}`;
+  }
+
   comprarItem(tipo) {
     const msgEl = document.getElementById('loja-msg');
+    
     if (tipo === 'pocao') {
+      if (this.jogador.hp === this.jogador.maxHp && this.jogador.vidas === this.jogador.maxVidas) {
+        msgEl.innerText = '⚠ Sua saúde e corações já estão cheios!'; return;
+      }
       if (this.ouro >= 20) {
-        this.ouro -= 20;
-        this.jogador.hp = this.jogador.maxHp; // Cura 100% do HP
-        this.jogador.vidas = this.jogador.maxVidas || 3; // Restaura todos os corações
-        this.audio.compra();
-        msgEl.innerText = '✔ Poção usada! HP e Corações 100% restaurados.';
-      } else {
-        msgEl.innerText = '✖ Ouro insuficiente!';
-      }
-    } else if (tipo === 'coracao') {
+        this.ouro -= 20; this.jogador.hp = this.jogador.maxHp; this.jogador.vidas = this.jogador.maxVidas;
+        this.audio.compra(); msgEl.innerText = '✔ Poção usada! HP e Corações 100% restaurados.';
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
+    } 
+    else if (tipo === 'coracao') {
       const maxVidasAtual = this.jogador.maxVidas || 3;
-      if (maxVidasAtual >= this.maxVidasPermitidas) {
-        msgEl.innerText = '⚠ Você já possui o limite máximo de 10 Corações!';
-        return;
-      }
-      if (this.ouro >= 40) {
-        this.ouro -= 40;
-        this.jogador.maxVidas = maxVidasAtual + 1;
-        this.jogador.vidas += 1;
-        this.audio.compra();
-        msgEl.innerText = `✔ Coração Extra adquirido! Total: ${this.jogador.maxVidas}/10`;
-      } else {
-        msgEl.innerText = '✖ Ouro insuficiente!';
-      }
-    } else if (tipo === 'gelo') {
-      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_gelo')) {
-        msgEl.innerText = '⚠ Você já possui a Lança de Gelo!';
-        return;
-      }
+      if (maxVidasAtual >= this.maxVidasPermitidas) { msgEl.innerText = '⚠ Você já possui o limite máximo de 10 Corações!'; return; }
+      if (this.ouro >= this.precoCoracao) {
+        this.ouro -= this.precoCoracao; 
+        this.jogador.maxVidas += 1; 
+        this.jogador.vidas += 1; 
+        this.audio.compra(); msgEl.innerText = `✔ Coração Extra adquirido! Total: ${this.jogador.maxVidas}/10`;
+        this.atualizarHUD();
+      } else { msgEl.innerText = `✖ Ouro insuficiente! Precisa de ${this.precoCoracao}.`; }
+    } 
+    else if (tipo === 'hp') {
       if (this.ouro >= 50) {
         this.ouro -= 50;
-        this.inventario.adicionarItem('livro_gelo');
+        this.jogador.maxHp += 100;
+        this.jogador.hp = this.jogador.maxHp;
         this.audio.compra();
-        msgEl.innerText = '✔ Lança de Gelo adquirida!';
-      } else {
-        msgEl.innerText = '✖ Ouro insuficiente!';
-      }
-    } else if (tipo === 'veneno') {
-      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_veneno')) {
-        msgEl.innerText = '⚠ Você já possui a Chuva de Veneno!';
-        return;
-      }
-      if (this.ouro >= 60) {
-        this.ouro -= 60;
-        this.inventario.adicionarItem('livro_veneno');
+        msgEl.innerText = '✔ Poção de Vida! +100 HP máximo.';
+        this.atualizarHUD();
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
+    } 
+    else if (tipo === 'mana') {
+      if (this.ouro >= 50) {
+        this.ouro -= 50;
+        this.jogador.maxMana += 100;
+        this.jogador.mana = this.jogador.maxMana;
         this.audio.compra();
-        msgEl.innerText = '✔ Chuva de Veneno adquirida!';
-      } else {
-        msgEl.innerText = '✖ Ouro insuficiente!';
-      }
+        msgEl.innerText = '✔ Poção de Mana! +100 MP máximo.';
+        this.atualizarHUD();
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
     }
-    document.getElementById('loja-ouro').innerText = this.ouro;
-    document.getElementById('hud-ouro').innerText = this.ouro;
+    else if (tipo === 'gelo') {
+      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_gelo')) { msgEl.innerText = '⚠ Você já possui a Lança de Gelo!'; return; }
+      if (this.ouro >= 50) {
+        this.ouro -= 50; this.inventario.adicionarItem('livro_gelo'); this.inventario.equipar('livro_gelo');
+        this.audio.compra(); msgEl.innerText = '✔ Lança de Gelo adquirida!';
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
+    } 
+    else if (tipo === 'veneno') {
+      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_veneno')) { msgEl.innerText = '⚠ Você já possui a Chuva de Veneno!'; return; }
+      if (this.ouro >= 60) {
+        this.ouro -= 60; this.inventario.adicionarItem('livro_veneno'); this.inventario.equipar('livro_veneno');
+        this.audio.compra(); msgEl.innerText = '✔ Chuva de Veneno adquirida!';
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
+    } 
+    else if (tipo === 'trovao') {
+      if (this.inventario.possuiItem && this.inventario.possuiItem('livro_trovao')) { msgEl.innerText = '⚠ Você já possui o Raio Trovejante!'; return; }
+      if (this.ouro >= 70) {
+        this.ouro -= 70; this.inventario.adicionarItem('livro_trovao'); this.inventario.equipar('livro_trovao');
+        this.audio.compra(); msgEl.innerText = '✔ Raio Trovejante adquirido!';
+      } else { msgEl.innerText = '✖ Ouro insuficiente!'; }
+    }
+    this.atualizarLojaVisual();
   }
 
   proximaFase() {
     this.subFaseIndex++;
-    if (this.subFaseIndex > 3) {
-      this.subFaseIndex = 1;
-      this.mundoAtualIndex++;
-    }
-
-    if (this.mundoAtualIndex > 5) {
+    if (this.subFaseIndex > 4) { this.subFaseIndex = 1; this.mundoAtualIndex++; }
+    if (this.mundoAtualIndex > 4) {
       this.audio.pararMusicaFundo();
       alert("🎉 PARABÉNS! VOCÊ RESGATOU SEU FELINO E SALVOU A FLORESTA!");
-      location.reload();
-      return;
+      location.reload(); return;
     }
-
     this.carregarFase(`${this.mundoAtualIndex}-${this.subFaseIndex}`);
   }
 
@@ -260,63 +345,21 @@ export class MotorJogo {
     if (!this.jogador || this.lojaAberta) return;
 
     this.animacaoFrame += dt * 10;
-    if (this.tempoInvulneravel > 0) {
-      this.tempoInvulneravel -= dt;
-    }
+    if (this.tempoInvulneravel > 0) this.tempoInvulneravel -= dt;
+    if (this.jogador.mana < this.jogador.maxMana) this.jogador.mana = Math.min(this.jogador.maxMana, this.jogador.mana + 15 * dt);
 
-    if (this.jogador.mana < this.jogador.maxMana) {
-      this.jogador.mana = Math.min(this.jogador.maxMana, this.jogador.mana + 15 * dt);
-    }
-
-    if (this.teclas['ArrowRight'] || this.teclas['KeyD']) {
-      this.jogador.vx = 220;
-      this.jogador.direcao = 1;
-    } else if (this.teclas['ArrowLeft'] || this.teclas['KeyA']) {
-      this.jogador.vx = -220;
-      this.jogador.direcao = -1;
-    } else {
-      this.jogador.vx = 0;
-    }
-
-    if ((this.teclas['Space'] || this.teclas['KeyW']) && this.jogador.noChao) {
-      this.jogador.vy = -450;
-      this.jogador.noChao = false;
-      this.audio.pulo();
-    }
-
-    this.jogador.vy += 1100 * dt;
-    this.jogador.x += this.jogador.vx * dt;
-    const proxY = this.jogador.y + this.jogador.vy * dt;
-
-    this.jogador.noChao = false;
-
-    this.obstaculos.forEach(obs => {
-      if (obs.tipo === 'arvore') return;
-
-      if (
-        this.jogador.x + this.jogador.largura > obs.x &&
-        this.jogador.x < obs.x + obs.largura &&
-        this.jogador.y + this.jogador.altura <= obs.y &&
-        proxY + this.jogador.altura >= obs.y
-      ) {
-        this.jogador.y = obs.y - this.jogador.altura;
-        this.jogador.vy = 0;
-        this.jogador.noChao = true;
-      }
-    });
-
-    if (!this.jogador.noChao) this.jogador.y = proxY;
-
-    this.jogador.projeteis.forEach(p => p.x += p.vx * dt);
+    SistemaJogador.atualizar(this.jogador, this.teclas, dt, this.obstaculos, this.audio);
     this.jogador.projeteis = this.jogador.projeteis.filter(p => p.x > this.cameraX && p.x < this.cameraX + 800);
 
     this.inimigos.forEach(ini => {
       if (ini.estado === 'morto') return;
       if (!ini.maxHp) ini.maxHp = ini.hp;
 
-      ini.x += ini.direcao * ini.velocidade * dt;
-      if (ini.x < ini.minX || ini.x > ini.maxX) {
-        ini.direcao *= -1;
+      const podeMover = SistemaInimigos.atualizarStatus(ini, dt, this.audio);
+      
+      if (podeMover) {
+        ini.x += ini.direcao * ini.velocidade * dt;
+        if (ini.x < ini.minX || ini.x > ini.maxX) ini.direcao *= -1;
       }
 
       this.jogador.projeteis.forEach((p, index) => {
@@ -326,24 +369,9 @@ export class MotorJogo {
           p.y < ini.y + ini.altura &&
           p.y + p.altura > ini.y
         ) {
-          ini.hp -= 1;
+          SistemaInimigos.receberDano(ini, p, this.audio);
+          if (ini.estado === 'morto') this.pontos += ini.ehBoss ? 500 : 200;
           this.jogador.projeteis.splice(index, 1);
-
-          if (ini.ehBoss) {
-            if (ini.hp <= 0) {
-              ini.estado = 'morto';
-              this.audio.chefeDerrota();
-              this.pontos += 500;
-            } else {
-              this.audio.chefeDano();
-            }
-          } else {
-            this.audio.acertoInimigo();
-            if (ini.hp <= 0) {
-              ini.estado = 'morto';
-              this.pontos += 200;
-            }
-          }
         }
       });
 
@@ -363,7 +391,9 @@ export class MotorJogo {
             if (ini.ehBoss) this.audio.chefeDerrota();
           }
         } else if (this.tempoInvulneravel <= 0) {
-          this.jogador.vidas--;
+          const danoInimigo = ini.ehBoss ? 40 : 20; 
+          this.jogador.hp -= danoInimigo;
+          
           this.audio.danoMago();
           this.tempoInvulneravel = 1.0;
 
@@ -371,14 +401,20 @@ export class MotorJogo {
           this.jogador.x += direcaoRepulsa * 45; 
           this.jogador.vy = -200; 
 
-          if (this.jogador.vidas <= 0) {
-            this.audio.pararMusicaFundo();
-            this.audio.somDerrotaJogo();
-            alert("💀 Fim de Jogo! Você perdeu todos os corações.");
-            if (this.onVoltarMenu) {
-              this.onVoltarMenu();
+          if (this.jogador.hp <= 0) {
+            this.jogador.vidas--;
+            if (this.jogador.maxVidas > this.jogador.vidas) {
+              this.jogador.maxVidas = this.jogador.vidas;
+            }
+            
+            if (this.jogador.vidas > 0) {
+              this.jogador.hp = this.jogador.maxHp;
             } else {
-              location.reload();
+              this.audio.pararMusicaFundo();
+              this.audio.somDerrotaJogo();
+              alert("💀 Fim de Jogo! Você perdeu todos os corações.");
+              if (this.onVoltarMenu) this.onVoltarMenu();
+              else location.reload();
             }
           }
         }
@@ -401,19 +437,10 @@ export class MotorJogo {
     });
 
     const chefaoVivo = this.faseConfig.chefao && this.inimigos.some(i => i.ehBoss && i.estado !== 'morto');
-    if (!chefaoVivo && this.jogador.x >= this.faseConfig.portalX) {
-      this.proximaFase();
-    }
+    if (!chefaoVivo && this.jogador.x >= this.faseConfig.portalX) this.proximaFase();
 
     this.cameraX = Math.max(0, Math.min(this.jogador.x - 200, this.larguraMapa - 800));
-
-    const elVidas = document.getElementById('hud-vidas-texto');
-    if (elVidas) {
-      elVidas.innerText = '❤️'.repeat(Math.max(0, this.jogador.vidas));
-    }
-    document.getElementById('hud-fase').innerText = `${this.mundoAtualIndex}-${this.subFaseIndex}`;
-    document.getElementById('hud-pontos').innerText = String(this.pontos).padStart(6, '0');
-    document.getElementById('hud-ouro').innerText = this.ouro;
+    this.atualizarHUD();
   }
 
   renderizar() {
@@ -422,71 +449,7 @@ export class MotorJogo {
     this.ctx.save();
     this.ctx.translate(-Math.floor(this.cameraX), 0);
 
-    this.ctx.fillStyle = '#090d16';
-    this.ctx.fillRect(0, 0, this.larguraMapa, 500);
-
-    this.ctx.fillStyle = '#1e1b4b';
-    this.ctx.fillRect(0, 200, this.larguraMapa, 180);
-
-    this.obstaculos.forEach(obs => {
-      if (obs.tipo === 'arvore') {
-        this.ctx.fillStyle = '#5c2c16';
-        this.ctx.fillRect(obs.x + obs.largura / 2 - 12, obs.y + 60, 24, 160);
-        this.ctx.fillStyle = obs.corFolhas || '#14532d';
-        this.ctx.beginPath();
-        this.ctx.arc(obs.x + obs.largura / 2, obs.y + 60, 55, 0, Math.PI * 2);
-        this.ctx.arc(obs.x + obs.largura / 2 - 30, obs.y + 90, 40, 0, Math.PI * 2);
-        this.ctx.arc(obs.x + obs.largura / 2 + 30, obs.y + 90, 40, 0, Math.PI * 2);
-        this.ctx.fill();
-      } else if (obs.tipo === 'chao') {
-        this.ctx.fillStyle = '#166534';
-        this.ctx.fillRect(obs.x, obs.y, obs.largura, obs.altura);
-        this.ctx.fillStyle = '#22c55e';
-        this.ctx.fillRect(obs.x, obs.y, obs.largura, 10);
-      } else if (obs.tipo === 'cano') {
-        this.ctx.fillStyle = '#15803d';
-        this.ctx.fillRect(obs.x, obs.y, obs.largura, obs.altura);
-        this.ctx.fillStyle = '#22c55e';
-        this.ctx.fillRect(obs.x - 4, obs.y, obs.largura + 8, 14);
-      } else if (obs.tipo === 'loja') {
-        const tw = 70;
-        const th = 60;
-        const tx = obs.x;
-        const ty = 380 - th; // Alinhamento exato no chão
-
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(tx + 5, ty + 15, 6, th - 15);
-        this.ctx.fillRect(tx + tw - 11, ty + 15, 6, th - 15);
-
-        this.ctx.fillStyle = '#d4b483';
-        this.ctx.beginPath();
-        this.ctx.moveTo(tx, ty + th);
-        this.ctx.lineTo(tx + tw / 2, ty);
-        this.ctx.lineTo(tx + tw, ty + th);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#c2a172';
-        this.ctx.beginPath();
-        this.ctx.moveTo(tx + tw / 2, ty);
-        this.ctx.lineTo(tx + tw / 2 - 6, ty + th);
-        this.ctx.lineTo(tx + tw / 2 + 6, ty + th);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#291605';
-        this.ctx.beginPath();
-        this.ctx.moveTo(tx + tw / 2 - 12, ty + th);
-        this.ctx.lineTo(tx + tw / 2 - 8, ty + th / 2);
-        this.ctx.lineTo(tx + tw / 2 + 8, ty + th / 2);
-        this.ctx.lineTo(tx + tw / 2 + 12, ty + th);
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#fde047';
-        this.ctx.font = 'bold 11px monospace';
-        this.ctx.fillText('⛺ Aperte [X] ou ✨ para o Mercador', tx - 45, ty - 12);
-      }
-    });
+    SistemaCenario.desenhar(this.ctx, this.obstaculos, this.larguraMapa);
 
     this.moedas.forEach(m => {
       if (!m.coletada) {
@@ -502,120 +465,13 @@ export class MotorJogo {
     });
 
     this.inimigos.forEach(ini => {
-      if (ini.estado === 'morto') return;
-      if (!ini.maxHp) ini.maxHp = ini.hp;
-
-      if (ini.ehBoss) {
-        const bx = ini.x;
-        const by = ini.y;
-        
-        this.ctx.fillStyle = '#65a30d';
-        this.ctx.fillRect(bx + 20, by + 40, 80, 70);
-
-        this.ctx.fillStyle = '#4d7c0f';
-        this.ctx.fillRect(bx + 30, by + 10, 60, 45);
-
-        this.ctx.fillStyle = '#0284c7';
-        this.ctx.beginPath();
-        this.ctx.moveTo(bx + 60, by + 10);
-        this.ctx.lineTo(bx + 30, by - 15);
-        this.ctx.lineTo(bx + 70, by - 5);
-        this.ctx.fill();
-
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(bx + 40, by + 20, 12, 8);
-        this.ctx.fillRect(bx + 68, by + 20, 12, 8);
-        this.ctx.fillStyle = '#000000';
-        this.ctx.fillRect(bx + 46, by + 22, 4, 4);
-        this.ctx.fillRect(bx + 74, by + 22, 4, 4);
-
-        this.ctx.fillStyle = '#991b1b';
-        this.ctx.fillRect(bx + 42, by + 34, 36, 12);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(bx + 45, by + 34, 6, 4);
-        this.ctx.fillRect(bx + 65, by + 34, 6, 4);
-
-        this.ctx.fillStyle = '#78350f';
-        this.ctx.fillRect(bx - 10, by + 75, 100, 10);
-        this.ctx.fillStyle = '#64748b';
-        this.ctx.fillRect(bx - 30, by + 60, 35, 35);
-      } else {
-        this.ctx.fillStyle = '#f5f5f4';
-        this.ctx.fillRect(ini.x + 10, ini.y + 20, 26, 26);
-        this.ctx.fillStyle = '#dc2626';
-        this.ctx.beginPath();
-        this.ctx.arc(ini.x + 23, ini.y + 20, 23, Math.PI, 0, false);
-        this.ctx.fill();
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(ini.x + 15, ini.y + 22, 4, 6);
-        this.ctx.fillRect(ini.x + 27, ini.y + 22, 4, 6);
-      }
-
-      // Barra de Energia Vital dos Inimigos ao tomar dano
-      if (ini.hp < ini.maxHp) {
-        const larguraBarra = ini.largura || 40;
-        const barraX = ini.x;
-        const barraY = ini.y - 10;
-        const porcentagemHp = Math.max(0, ini.hp / ini.maxHp);
-
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.fillRect(barraX, barraY, larguraBarra, 5);
-        this.ctx.fillStyle = '#22c55e';
-        this.ctx.fillRect(barraX, barraY, larguraBarra * porcentagemHp, 5);
-      }
+      SistemaInimigos.desenhar(this.ctx, ini);
     });
 
-    if (this.jogador) {
-      if (this.tempoInvulneravel > 0 && Math.floor(this.tempoInvulneravel * 10) % 2 === 0) {
-        this.ctx.globalAlpha = 0.4;
-      }
+    const gaiola = this.obstaculos.find(o => o.tipo === 'gaiola');
+    SistemaCenario.desenharGaiola(this.ctx, gaiola);
 
-      const balocoPernas = Math.sin(this.animacaoFrame) * 4;
-
-      this.ctx.fillStyle = '#7c3aed';
-      this.ctx.fillRect(this.jogador.x + 4, this.jogador.y + 18, 28, 28);
-      
-      this.ctx.fillStyle = '#3b0764';
-      this.ctx.fillRect(this.jogador.x + 6, this.jogador.y + 46, 10, 6 + (this.jogador.vx !== 0 ? balocoPernas : 0));
-      this.ctx.fillRect(this.jogador.x + 20, this.jogador.y + 46, 10, 6 - (this.jogador.vx !== 0 ? balocoPernas : 0));
-
-      this.ctx.fillStyle = '#fef08a';
-      this.ctx.fillRect(this.jogador.x + 8, this.jogador.y + 10, 20, 14);
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.fillRect(this.jogador.x + 10, this.jogador.y + 18, 16, 8);
-
-      this.ctx.fillStyle = '#0f172a';
-      const olhoX = this.jogador.direcao > 0 ? this.jogador.x + 20 : this.jogador.x + 10;
-      this.ctx.fillRect(olhoX, this.jogador.y + 13, 3, 4);
-
-      this.ctx.fillStyle = '#6d28d9';
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.jogador.x + 2, this.jogador.y + 10);
-      this.ctx.lineTo(this.jogador.x + 34, this.jogador.y + 10);
-      this.ctx.lineTo(this.jogador.x + (this.jogador.direcao > 0 ? 38 : -4), this.jogador.y - 12);
-      this.ctx.fill();
-
-      this.ctx.strokeStyle = '#78350f';
-      this.ctx.lineWidth = 4;
-      this.ctx.beginPath();
-      const cajadoX = this.jogador.direcao > 0 ? this.jogador.x + 34 : this.jogador.x - 2;
-      this.ctx.moveTo(cajadoX, this.jogador.y + 45);
-      this.ctx.lineTo(cajadoX, this.jogador.y + 5);
-      this.ctx.stroke();
-      this.ctx.fillStyle = this.jogador.corProj;
-      this.ctx.beginPath();
-      this.ctx.arc(cajadoX, this.jogador.y + 2, 6, 0, Math.PI * 2);
-      this.ctx.fill();
-
-      this.jogador.projeteis.forEach(p => {
-        this.ctx.fillStyle = p.cor;
-        this.ctx.beginPath();
-        this.ctx.arc(p.x + 9, p.y + 6, 8, 0, Math.PI * 2);
-        this.ctx.fill();
-      });
-
-      this.ctx.globalAlpha = 1.0;
-    }
+    SistemaJogador.desenhar(this.ctx, this.jogador, this.animacaoFrame, this.tempoInvulneravel);
 
     const chefaoVivo = this.faseConfig.chefao && this.inimigos.some(i => i.ehBoss && i.estado !== 'morto');
     if (!chefaoVivo && this.faseConfig) {
