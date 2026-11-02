@@ -17,11 +17,13 @@ export function gerarFases() {
       const tema = temasMundos[mundo];
 
       const larguraFase = ehChefao ? 2500 : 3200 + mundo * 200;
+      
+      // Apenas o chão
       const obstaculos = [
         { tipo: 'chao', x: 0, y: 380, largura: larguraFase, altura: 120, cor: tema.corChao }
       ];
 
-      // Plataformas acessíveis (Y mais alto para não prender o cogumelo)
+      // Plataformas
       if (!ehChefao) {
         if (sub === 1) {
           obstaculos.push(
@@ -36,8 +38,8 @@ export function gerarFases() {
             { tipo: 'plataforma', x: 1500, y: 220, largura: 120, altura: 20 }
           );
         }
-        // Mercador (Y: 380 - 60 = 320, para bater no chão)
-        obstaculos.push({ tipo: 'loja', x: 1100, y: 280, largura: 100, altura: 100 });
+        // A Tenda foi REMOVIDA daqui. Ela agora só existe no mapa.js.
+        
       } else {
         obstaculos.push(
           { tipo: 'plataforma', x: 700, y: 250, largura: 140, altura: 20 },
@@ -45,7 +47,7 @@ export function gerarFases() {
         );
       }
 
-      // Árvores de fundo
+      // Árvores (apenas decoração, não colidem)
       const numElementos = ehChefao ? 3 : 5;
       for (let a = 0; a < numElementos; a++) {
         obstaculos.push({
@@ -67,7 +69,7 @@ export function gerarFases() {
 
       const inimigos = [];
       
-      // INIMIGOS NORMAIS
+      // Inimigos normais
       if (!ehChefao) {
         if (mundo === 1) {
           inimigos.push(
@@ -91,92 +93,36 @@ export function gerarFases() {
           );
         }
       } 
-      // CHEFES ÚNICOS
+      // Chefes
       else {
         let boss = {};
-        if (mundo === 1) { 
-          boss = { nome: "Goblin Lorde", hp: 500, tipo: 'goblin', fraqueza: 'gelo', cor: '#65a30d' };
-        } else if (mundo === 2) { 
-          boss = { nome: "Sapo Ancião", hp: 800, tipo: 'sapo_boss', fraqueza: 'trovao', cor: '#22c55e' };
-        } else if (mundo === 3) { 
-          boss = { nome: "Cavaleiro Espectral", hp: 1200, tipo: 'cavaleiro', fraqueza: 'fogo', cor: '#a855f7' };
-        } else if (mundo === 4) { 
-          boss = { nome: "Imperatriz Sombria", hp: 2000, tipo: 'imperatriz', fraqueza: 'trovao', cor: '#991b1b' };
-        }
+        if (mundo === 1) { boss = { nome: "Goblin Lorde", hp: 500, tipo: 'goblin', fraqueza: 'gelo', cor: '#65a30d' }; }
+        else if (mundo === 2) { boss = { nome: "Sapo Ancião", hp: 800, tipo: 'sapo_boss', fraqueza: 'trovao', cor: '#22c55e' }; }
+        else if (mundo === 3) { boss = { nome: "Cavaleiro Espectral", hp: 1200, tipo: 'cavaleiro', fraqueza: 'fogo', cor: '#a855f7' }; }
+        else if (mundo === 4) { boss = { nome: "Imperatriz Sombria", hp: 2000, tipo: 'imperatriz', fraqueza: 'trovao', cor: '#991b1b' }; }
 
         inimigos.push({
-          id: 99,
-          x: larguraFase - 600,
-          y: 260,
-          largura: 120,
-          altura: 120,
-          estado: 'vivo',
-          direcao: -1,
-          velocidade: 45 + mundo * 10,
-          hp: boss.hp,
-          maxHp: boss.hp,
-          ehBoss: true,
-          nome: boss.nome,
-          tipo: boss.tipo,
-          fraqueza: boss.fraqueza,
-          cor: boss.cor,
-          minX: larguraFase - 900,
-          maxX: larguraFase - 300
+          id: 99, x: larguraFase - 600, y: 260, largura: 120, altura: 120,
+          estado: 'vivo', direcao: -1, velocidade: 45 + mundo * 10,
+          hp: boss.hp, maxHp: boss.hp, ehBoss: true, nome: boss.nome, tipo: boss.tipo, fraqueza: boss.fraqueza, cor: boss.cor,
+          minX: larguraFase - 900, maxX: larguraFase - 300
         });
 
-        // Fase Final (Mundo 4-4): Adiciona a gaiola e o gatinho (inimigo pacífico)
         if (mundo === 4 && sub === 4) {
            obstaculos.push({ tipo: 'gaiola', x: larguraFase - 300, y: 280, largura: 60, altura: 100 });
-           
-           // O gatinho é um inimigo especial que não se move e não dá dano
            inimigos.push({
-             id: 100,
-             x: larguraFase - 290,
-             y: 330,
-             largura: 40, altura: 40,
-             estado: 'vivo',
-             direcao: 1,
-             velocidade: 0,
-             hp: 1, maxHp: 1,
-             tipo: 'gatinho',
-             minX: 0, maxX: 0
+             id: 100, x: larguraFase - 290, y: 330, largura: 40, altura: 40,
+             estado: 'vivo', direcao: 1, velocidade: 0, hp: 1, maxHp: 1, tipo: 'gatinho', minX: 0, maxX: 0
            });
         }
       }
 
       let nomeFase = `${tema.nome} - Parte ${sub}`;
-      // Substitua o bloco de plataformas por este:
-      if (!ehChefao) {
-        if (sub === 1) {
-          obstaculos.push(
-            { tipo: 'plataforma', x: 400, y: 300, largura: 110, altura: 20 },
-            { tipo: 'plataforma', x: 800, y: 280, largura: 120, altura: 20 },
-            { tipo: 'plataforma', x: 1300, y: 300, largura: 100, altura: 20 }
-          );
-        } else {
-          obstaculos.push(
-            { tipo: 'plataforma', x: 500, y: 290, largura: 130, altura: 20 },
-            { tipo: 'plataforma', x: 1000, y: 270, largura: 110, altura: 20 },
-            { tipo: 'plataforma', x: 1500, y: 290, largura: 120, altura: 20 }
-          );
-        }
-        obstaculos.push({ tipo: 'loja', x: 1100, y: 280, largura: 100, altura: 100 });
-      } else {
-        obstaculos.push(
-          { tipo: 'plataforma', x: 700, y: 300, largura: 140, altura: 20 },
-          { tipo: 'plataforma', x: 1400, y: 280, largura: 140, altura: 20 }
-        );
-      }
+      if (ehChefao) nomeFase = `Confronto: ${inimigos[0].nome}`;
 
       fases[chave] = {
-        nome: nomeFase,
-        mundo: mundo,
-        larguraMapa: larguraFase,
-        chefao: ehChefao,
-        obstaculos,
-        inimigos,
-        moedas,
-        portalX: larguraFase - 250
+        nome: nomeFase, mundo: mundo, larguraMapa: larguraFase, chefao: ehChefao,
+        obstaculos, inimigos, moedas, portalX: larguraFase - 250
       };
     }
   }

@@ -9,6 +9,9 @@
 <body>
 
   <main id="game-container">
+    <!-- CONTAINER DO MAPA -->
+    <div id="mapa-container" style="display: none;"></div>
+
     <!-- Menu Inicial -->
     <div id="menu-inicial" class="menu-overlay">
       <h1>O Mago da Floresta</h1>
@@ -60,7 +63,7 @@
       </div>
     </div>
 
-    <!-- HUD Superior (Agora como <header>) -->
+    <!-- HUD Superior -->
     <header id="hud" style="display: none;">
       <div class="hud-box">
         <div>MAGO</div>
@@ -82,10 +85,7 @@
         <div>MUNDO: <span id="hud-fase">1-1</span></div>
       </div>
       
-      <!-- Botão do Grimório no meio do Header -->
-      <button id="btn-grimorio" class="btn-grimorio-header" style="display: none;">
-        📕
-      </button>
+      <button id="btn-grimorio" class="btn-grimorio-header" style="display: none;">📕</button>
 
       <div class="hud-box magia-box">
         MAGIA: <span id="hud-magia">Chama Arcana</span>
@@ -113,34 +113,20 @@
       <p style="font-size: 12px; margin-bottom: 15px;">Ouro atual: 🪙 <span id="loja-ouro">0</span></p>
       
       <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 11px; max-height: 250px; overflow-y: auto; padding-right: 5px;">
-        <button id="comprar-pocao" class="btn-loja">
-          <span>[1] Poção (Cura Total)</span> <span>🪙 20</span>
-        </button>
-        <button id="comprar-coracao" class="btn-loja">
-          <span>[2] Coração Extra (+1 Vida)</span> <span>🪙 40</span>
-        </button>
-        <button id="comprar-gelo" class="btn-loja">
-          <span>[3] Lança de Gelo</span> <span>🪙 50</span>
-        </button>
-        <button id="comprar-veneno" class="btn-loja">
-          <span>[4] Chuva de Veneno</span> <span>🪙 60</span>
-        </button>
-        <button id="comprar-trovao" class="btn-loja">
-          <span>[5] Raio Trovejante</span> <span>🪙 70</span>
-        </button>
-        <button id="comprar-hp" class="btn-loja">
-          <span>[6] Poção de Vida (+100 HP)</span> <span>🪙 50</span>
-        </button>
-        <button id="comprar-mana" class="btn-loja">
-          <span>[7] Poção de Mana (+100 MP)</span> <span>🪙 50</span>
-        </button>
+        <button id="comprar-pocao" class="btn-loja"><span>[1] Poção (Cura Total)</span> <span>🪙 20</span></button>
+        <button id="comprar-coracao" class="btn-loja"><span>[2] Coração Extra (+1 Vida)</span> <span>🪙 40</span></button>
+        <button id="comprar-gelo" class="btn-loja"><span>[3] Lança de Gelo</span> <span>🪙 50</span></button>
+        <button id="comprar-veneno" class="btn-loja"><span>[4] Chuva de Veneno</span> <span>🪙 60</span></button>
+        <button id="comprar-trovao" class="btn-loja"><span>[5] Raio Trovejante</span> <span>🪙 70</span></button>
+        <button id="comprar-hp" class="btn-loja"><span>[6] Poção de Vida (+100 HP)</span> <span>🪙 50</span></button>
+        <button id="comprar-mana" class="btn-loja"><span>[7] Poção de Mana (+100 MP)</span> <span>🪙 50</span></button>
       </div>
 
       <p id="loja-msg" style="font-size: 11px; margin: 10px 0; color: #38bdf8; min-height: 15px;"></p>
       <button id="fechar-loja" style="background: #991b1b; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%;">Sair do Mercador (X)</button>
     </div>
 
-    <!-- Inventário (Abre do lado direito) -->
+    <!-- Inventário -->
     <div id="inventario-container" style="display: none;">
       <div class="inventario-header"><span>Grimório</span></div>
       <div id="inventario-grid" class="inventario-grid"></div>

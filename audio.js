@@ -31,9 +31,21 @@ export class SistemaAudio {
     } catch (e) {}
   }
 
+  // --- MÉTODOS DE MÚSICA ---
+
+  pararMusica() {
+    if (this.intervaloMusica) {
+      clearInterval(this.intervaloMusica);
+      this.intervaloMusica = null;
+    }
+  }
+
+  pararMusicaFundo() {
+    this.pararMusica(); // Compatibilidade com o método antigo
+  }
+
   iniciarMusicaFundo() {
-    if (this.intervaloMusica) return;
-    
+    this.pararMusica();
     const notas = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
     let index = 0;
 
@@ -45,12 +57,67 @@ export class SistemaAudio {
     }, 450);
   }
 
-  pararMusicaFundo() {
-    if (this.intervaloMusica) {
-      clearInterval(this.intervaloMusica);
-      this.intervaloMusica = null;
-    }
+  // Música do Mapa (inspirada em Castlevania II - Message of Darkness)
+  tocarMusicaMapa() {
+    this.pararMusica();
+    const notas = [220, 261.63, 293.66, 329.63, 293.66, 261.63, 220, 196];
+    let index = 0;
+    
+    this.intervaloMusica = setInterval(() => {
+      if (this.volumeMaster > 0) {
+        this.tocarTom(notas[index], 'triangle', 0.4, 0.2);
+        if (index % 2 === 0) this.tocarTom(notas[index] / 2, 'sine', 0.4, 0.15);
+        index = (index + 1) % notas.length;
+      }
+    }, 500);
   }
+
+  // Música das Fases (inspirada em Castlevania - tema do mundo 1)
+  tocarMusicaFase() {
+    this.pararMusica();
+    const notas = [329.63, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+    let index = 0;
+    
+    this.intervaloMusica = setInterval(() => {
+      if (this.volumeMaster > 0) {
+        this.tocarTom(notas[index], 'square', 0.25, 0.15);
+        if (index % 4 === 0) this.tocarTom(notas[index] / 4, 'sawtooth', 0.5, 0.1);
+        index = (index + 1) % notas.length;
+      }
+    }, 250);
+  }
+
+  // Música do Boss (inspirada em Breath of Fire IV)
+  tocarMusicaBoss() {
+    this.pararMusica();
+    const notas = [146.83, 146.83, 174.61, 196.00, 220.00, 196.00, 174.61, 146.83];
+    let index = 0;
+    
+    this.intervaloMusica = setInterval(() => {
+      if (this.volumeMaster > 0) {
+        this.tocarTom(notas[index], 'sawtooth', 0.4, 0.2);
+        if (index % 2 === 0) this.tocarTom(50, 'square', 0.1, 0.15);
+        index = (index + 1) % notas.length;
+      }
+    }, 400);
+  }
+
+  // Música de Vitória (Fanfarra)
+  tocarMusicaVitoria() {
+    this.pararMusica();
+    const notas = [523.25, 659.25, 783.99, 1046.50];
+    let index = 0;
+    
+    this.intervaloMusica = setInterval(() => {
+      if (this.volumeMaster > 0) {
+        this.tocarTom(notas[index], 'square', 0.6, 0.25);
+        index++;
+        if (index >= notas.length) this.pararMusica();
+      }
+    }, 250);
+  }
+
+  // --- EFEITOS SONOROS ---
 
   pulo() {
     this.tocarTom(320, 'sine', 0.15, 0.3);
